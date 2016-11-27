@@ -1,6 +1,3 @@
-# SQL-like library for queries
-library(sqldf)
-
 # Disabling scientific notation
 options(scipen=999)
 
@@ -101,7 +98,6 @@ m1 = mergeTables(disp[,c("client_id","account_id")], client[,c("client_id","gend
 
 # Joining m1 with loan data by account_id
 m2 = mergeTables(m1,loan_train[,c("account_id","status")],"account_id")
-
 
 # Age vs Status
 boxplot(age~status,data=m2)
