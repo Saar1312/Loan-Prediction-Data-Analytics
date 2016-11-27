@@ -44,9 +44,9 @@ formatDate <- function(date)
 getGender <- function(date)
 {
 	if (substr(toString(date),3,4) <= "12"){
-			return("Hombre")
+			return("Male")
 	} else {
-			return("Mujer")
+			return("Female")
 	}
 }
 
@@ -55,6 +55,12 @@ getAntiquity <- function(date, refDate)
 {
 	return(difftime(strptime(toString(refDate), format = "%y%m%d"),
 	strptime(paste("19",toString(formatDate(date)),sep=""), format = "%Y%m%d"),units="weeks")/52.25)
+}
+
+
+mergeTables <- function(df1,df2,colName)
+{
+	merge(df1,df2,by=colName)
 }
 
 # Table files names
@@ -90,6 +96,28 @@ checkNa(dframes)
 client$gender<-unlist(lapply(client$birth_number,getGender))
 client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
 
+# Joining disp (table that maps clients IDs to accounts IDs) and client tables by client_id
+m1 = mergeTables(disp[,c("client_id","account_id")], client[,c("client_id","gender","age")],"client_id")
+
+# Joining m1 with loan data by account_id
+m2 = mergeTables(m1,loan_train[,c("account_id","status")],"account_id")
+
+
+# Age vs Status
+boxplot(age~status,data=m2)
+
+# By gender
+boxplot(age~status,data=m2[m2$gender == "Hombre",])
+boxplot(age~status,data=m2[m2$gender == "Mujer",])
+
+# Contingency table for gender vs status
+c1 <- table(m2$gender,m2$status)
+
+# Barplot gender vs status
+barplot(c1,
+  main = "Gender-Status frequencies",
+)
+
 "
 # DUDAS
 - Los prestamos se toman como ya finalizados?
@@ -100,4 +128,5 @@ de si un prestamo terminara de forma exitosa o no?
 - Quitar ceros de account en transfers? es noise? afecta en algo?
 - interest credited -- interest that a savings institution automatically deposits to a savings account. 
 - Falta la relacion Permanent order (esta en el enunciado pero no hay ningun archivo con ese nombre)
+- Usar contingency tables para comparar nominal-nominal y boxplot para numerical-nominal
 "
