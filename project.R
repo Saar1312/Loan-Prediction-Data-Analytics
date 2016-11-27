@@ -1,3 +1,6 @@
+# SQL-like library for queries
+library(sqldf)
+
 # Disabling scientific notation
 options(scipen=999)
 
@@ -86,3 +89,15 @@ checkNa(dframes)
 # Adding new columns of gender and age to client table
 client$gender<-unlist(lapply(client$birth_number,getGender))
 client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
+
+"
+# DUDAS
+- Los prestamos se toman como ya finalizados?
+- En el enunciado dice que hay varios status A,B,C,D pero en los archivos aparece 1 y -1
+- Hay datos de testing para las relaciones card, loan y transaction. Hay que hacer predicciones de algo mas ademas
+de si un prestamo terminara de forma exitosa o no?
+- sanction interest if negative balance?
+- Quitar ceros de account en transfers? es noise? afecta en algo?
+- interest credited -- interest that a savings institution automatically deposits to a savings account. 
+- Falta la relacion Permanent order (esta en el enunciado pero no hay ningun archivo con ese nombre)
+"
