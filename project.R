@@ -10,6 +10,7 @@ loadData <- function(tables, path, empty_values)
 	}
 }
 
+# Counts the number of NA fields in a column 
 countNa <- function(df)
 {
     for(col in names(df)){
@@ -17,6 +18,7 @@ countNa <- function(df)
     }
 }
 
+# Prints number of NAs for each column
 checkNa <- function(frames)
 {
 	for(f in frames){
@@ -35,6 +37,7 @@ formatDate <- function(date)
 	}
 }
 
+# Determines the gender of a client using the birthdate (female dates have month +50)
 getGender <- function(date)
 {
 	if (substr(toString(date),3,4) <= "12"){
@@ -51,11 +54,22 @@ getAntiquity <- function(date, refDate)
 	strptime(paste("19",toString(formatDate(date)),sep=""), format = "%Y%m%d"),units="weeks")/52.25)
 }
 
+# Table files names
+tables <- c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
+			"loan_train", "trans_test", "trans_train")
+
+# Change here the path of data
+path <- "~/Mineria/Data/"
+
+# Values of empty fields in .csv files
+na_values <- c(""," ","NA","?")
+
 # Esto es para ver los outliers de las columnas numericas importantes
 # Probar al final el modelo entrenado con y sin outliers
 #boxplot(district[,4:16])
 #boxplot(loan_train$amount)
 
+# Putting al tables in a list for passing them to checkNA
 dframes <- list(account,card_test,card_train,client,disp,
              district,loan_test,loan_train,trans_test,trans_train)
 
@@ -64,18 +78,11 @@ dframes <- list(account,card_test,card_train,client,disp,
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
 			trans_train$date,trans_test$date,loan_test$date,loan_train$date)
 
-loadData(c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
-			"loan_train", "trans_test", "trans_train"), c("~/Mineria/Data/") ,c(""," ","NA","?"))
+loadData(tables, c(path) ,na_values)
 
 # Checking number of NA field for each table
 checkNa(dframes)
 
+# Adding new columns of gender and age to client table
 client$gender<-unlist(lapply(client$birth_number,getGender))
 client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
-
-
-# antiguedad de tarjetas
-# antiguedad de cuenta
-# edad de usuario
-# tiempo del prestamo por terminar
-# para que es fecha de transaccion?
