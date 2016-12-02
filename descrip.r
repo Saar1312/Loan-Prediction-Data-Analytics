@@ -50,6 +50,7 @@ client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
 #Exact age 
 client$age<-round(client$age)
 
+
 # Joining disp (table that maps clients IDs to accounts IDs) and client tables by client_id
 m1 = mergeTables(disp[,c("client_id","account_id")], client[,c("client_id","gender","age")],"client_id")
 
