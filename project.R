@@ -2,12 +2,14 @@
 options(scipen=999)
 
 # Loading data
-loadData <- function(tables, path, empty_values)
+loadData <- function(tables_names, path, empty_values)
 {
-	files <- paste(path, tables, ".csv",sep="")
+	files = paste(path, tables_names, ".csv",sep="")
+	tables = list()
 	for (f in files){
-		read.csv(f, sep=";", na.strings=empty_values)
+		tables = c(tables,read.csv(f, sep=";", na.strings=empty_values))
 	}
+	return(tables)
 }
 
 # Counts the number of NA fields in a column 
@@ -61,7 +63,7 @@ mergeTables <- function(df1,df2,colName)
 }
 
 # Table files names
-tables <- c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
+tables_names <- c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
 			"loan_train", "trans_test", "trans_train")
 
 # Change here the path of data
@@ -69,6 +71,8 @@ path <- "~/Mineria/Data/"
 
 # Values of empty fields in .csv files
 na_values <- c(""," ","NA","?")
+
+tables <- loadData(tables, c(path) ,na_values)
 
 # Esto es para ver los outliers de las columnas numericas importantes
 # Probar al final el modelo entrenado con y sin outliers
@@ -83,8 +87,6 @@ dframes <- list(account,card_test,card_train,client,disp,
 # because data is older than 
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
 			trans_train$date,trans_test$date,loan_test$date,loan_train$date)
-
-loadData(tables, c(path) ,na_values)
 
 # Checking number of NA field for each table
 checkNa(dframes)
