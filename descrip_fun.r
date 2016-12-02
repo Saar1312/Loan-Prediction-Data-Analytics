@@ -1,4 +1,4 @@
-"Extradition of knowledge and Machine Learning
+"Knowledge Extraction and Machine Learning
 Samuel Arleo & Daniela Socas
 Last modified 12/02/2016
 Descriptive functions to start the project and pre-processing"
@@ -13,12 +13,11 @@ loadData <- function(path, empty_values)
 {
 	files <- list.files(path)
 	for (i in files){
-		a <- read.csv2(i, header = TRUE, na.strings=na_values)
-		assign(i, a)
+		a <- read.csv2(paste(path,i,sep=""), header = TRUE, na.strings=na_values)
+		assign(unlist(strsplit(i,"[.]"))[1], a, envir = .GlobalEnv)
 	}
 	remove(a)
 }
-
 
 #------------------ NA VALUES -------------------------
 

@@ -13,10 +13,10 @@ tables <- c("account", "card_test", "card_train", "client", "disp", "district", 
 #path <- "~/Mineria/Data/"
 path <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/Data"
 
-loadData( path ,na_values)
-
 # Values of empty fields in .csv files
 na_values <- c(""," ","NA","?")
+
+loadData( path ,na_values)
 
 # Putting al tables in a list for passing them to checkNA
 dframes <- list.files(path)
@@ -28,22 +28,22 @@ checkNa(dframes)
 
 # Max date on client$birth_number, card$issued to avoid considering dates like 11-01-01 as 2011-01-01 but 1911-01-01
 # because data is older than 
-refDate <- max(client.csv$birth_number,card_train.csv$issued,card_test.csv$issued,account.csv$date,
-               trans_train.csv$date,trans_test.csv$date,loan_test.csv$date,loan_train.csv$date)
+refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
+               trans_train$date,trans_test$date,loan_test$date,loan_train$date)
 
 
 # Adding new columns of gender and age to client table
-client.csv$gender<-unlist(lapply(client.csv$birth_number,getGender))
-client.csv$age<-unlist(lapply(client.csv$birth_number,getAntiquity,refDate))
+client$gender<-unlist(lapply(client$birth_number,getGender))
+client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
 
 #Exact age 
-client.csv$age<-round(client.csv$age)
+client$age<-round(client$age)
 
 # Joining disp (table that maps clients IDs to accounts IDs) and client tables by client_id
-m1 = mergeTables(disp.csv[,c("client_id","account_id")], client.csv[,c("client_id","gender","age")],"client_id")
+m1 = mergeTables(disp[,c("client_id","account_id")], client[,c("client_id","gender","age")],"client_id")
 
 # Joining m1 with loan data by account_id
-m2 = mergeTables(m1,loan_train.csv[,c("account_id","status")],"account_id")
+m2 = mergeTables(m1,loan_train[,c("account_id","status")],"account_id")
 
 #------------------ PLOTS -------------------------
 
