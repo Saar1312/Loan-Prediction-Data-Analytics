@@ -1,7 +1,18 @@
-"Extradition of knowledge and Machine Learning
-Samuel Arleo & Daniela Socas
+
+"
+Faculty of Engineering. University of Porto
+Extradition of knowledge and Machine Learning
+	Authors: Samuel Arleo & Daniela Socas
+
 Last modified 12/02/2016
 Descriptive functions to start the project and pre-processing"
+
+#------------------ LOAD FUNCTIONS -------------------------
+
+#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
+wd <- "~/Mineria/"
+
+source(paste(wd, "descrip_fun.r", sep=""))
 
 #------------------ LOAD DATA -------------------------
 
@@ -19,7 +30,8 @@ na_values <- c(""," ","NA","?")
 loadData( path ,na_values)
 
 # Putting al tables in a list for passing them to checkNA
-dframes <- list.files(path)
+dframes <- list(account, card_test, card_train, client, disp, district, loan_test, 
+            loan_train, trans_test, trans_train)
 
 # Checking number of NA field for each table
 checkNa(dframes)
@@ -30,7 +42,6 @@ checkNa(dframes)
 # because data is older than 
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
                trans_train$date,trans_test$date,loan_test$date,loan_train$date)
-
 
 # Adding new columns of gender and age to client table
 client$gender<-unlist(lapply(client$birth_number,getGender))
