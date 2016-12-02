@@ -10,8 +10,8 @@ tables <- c("account", "card_test", "card_train", "client", "disp", "district", 
             "loan_train", "trans_test", "trans_train")
 
 # Change here the path of data
-#path <- "~/Mineria/Data/"
-path <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/Data"
+path <- "~/Mineria/Data/"
+#path <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/Data"
 
 # Values of empty fields in .csv files
 na_values <- c(""," ","NA","?")

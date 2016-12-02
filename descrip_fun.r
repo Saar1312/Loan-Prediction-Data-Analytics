@@ -24,8 +24,6 @@ loadData <- function(path, empty_values)
 # Counts the number of NA fields in a column 
 countNa <- function(df)
   {
-    cat(df)
-    cat(colnames(df))
     for(col in colnames(df)){
       cat(col," ",sum(is.na(df[[col]])),"\n")
       
