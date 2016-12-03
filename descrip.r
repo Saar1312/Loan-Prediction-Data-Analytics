@@ -39,6 +39,13 @@ trans_test$date <- ymd(trans_test$date)
 #Have to change the +50 months 
 client$birth_number <- ymd(client$birth_number)
 
+#------------------ Factors to int -------------------------
+
+trans_train$balance <- as.numeric(as.character(trans_train$balance))
+trans_train$amount <- as.numeric(as.character(trans_train$amount))
+
+trans_test$balance <- as.numeric(as.character(trans_test$balance))
+trans_test$amount <- as.numeric(as.character(trans_test$amount))
 
 #------------------ CLEANING AGE/GENDER -------------------------
 
@@ -110,6 +117,7 @@ plot(loan_train$payments,loan_train$status)
 plot(trans_train$type)
 plot(trans_train$operation)
 hist(trans_train$amount)
+hist(trans_train$balance)
 
 str(trans_train)
 summary(trans_train)
