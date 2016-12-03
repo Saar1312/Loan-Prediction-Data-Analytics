@@ -11,7 +11,7 @@ tables <- c("account", "card_test", "card_train", "client", "disp", "district", 
 
 # Change here the path of data
 path <- "~/Mineria/Data/"
-#path <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/Data"
+#path <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/Data/"
 
 # Values of empty fields in .csv files
 na_values <- c(""," ","NA","?")
@@ -23,6 +23,22 @@ dframes <- list.files(path)
 
 # Checking number of NA field for each table
 checkNa(dframes)
+
+#------------------ DATES -------------------------
+
+#Date columns in date POSIX type better than int 
+
+account$date <-  ymd(account$date)
+card_train$issued <- ymd(card_train$issued)
+card_test$issued <- ymd(card_test$issued)
+loan_train$date <- ymd(loan_train$date)
+loan_test$date <- ymd(loan_test$date)
+trans_train$date <- ymd(trans_train$date)
+trans_test$date <- ymd(trans_test$date)
+
+#Have to change the +50 months 
+client$birth_number <- ymd(client$birth_number)
+
 
 #------------------ CLEANING AGE/GENDER -------------------------
 
@@ -47,6 +63,10 @@ m2 = mergeTables(m1,loan_train[,c("account_id","status")],"account_id")
 
 #------------------ PLOTS -------------------------
 
+#---------- Account ----------
+#Most frequent by far is monthly issuance
+plot(account$frequency)
+
 # Age vs Status
 boxplot(age~status,data=m2)
 
@@ -60,6 +80,39 @@ c1 <- table(m2$gender,m2$status)
 # Barplot gender vs status
 barplot(c1,main = "Gender-Status frequencies")
 
+#---------- Card -------------
+
+#Frequency types card
+plot(card_train.csv$type)
+
+#---------- Client ------------
+#We can see how the 1st district has more people
+hist(client$district_id)
+
+hist(client$age)
+
+#---------- Disp --------------
+#Way more OWNERs 
+plot(disp$type)
+
+
+#---------- Loan --------------
+
+hist(loan_train$duration)
+plot(loan_train$status)
+hist(loan_train$amount)
+plot(loan_train$status,loan_train$amount)
+plot(loan_train$payments,loan_train$status)
+
+#---------- Trans -------------
+
+#Most are withdrawals and then credit. 
+plot(trans_train$type)
+plot(trans_train$operation)
+hist(trans_train$amount)
+
+str(trans_train)
+summary(trans_train)
 #------------------ OUTLIERS -------------------------
 
 # Esto es para ver los outliers de las columnas numericas importantes
