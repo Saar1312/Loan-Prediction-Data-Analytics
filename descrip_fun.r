@@ -65,9 +65,9 @@ formatDate <- function(date)
 getGender <- function(date)
 {
 	if (substr(toString(date),3,4) <= "12"){
-			return("0")
+			return("0")		# 0: Male
 	} else {
-			return("1")
+			return("1")		# 1: Female
 	}
 }
 

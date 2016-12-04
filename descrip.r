@@ -12,8 +12,10 @@ Descriptive functions to start the project and pre-processing
 
 if(! "lubridate" %in% rownames(installed.packages())){
 	install.packages("lubridate")
+	install.packages("ggplot2")
 }
 library(lubridate)
+library(ggplot2)
 
 #------------------ LOAD FUNCTIONS -------------------------
 
@@ -96,7 +98,7 @@ plot(account$frequency)
 # Age vs Status
 boxplot(age~status,data=m2)
 
-# By gender
+# By gender 0: Male 1: Female
 boxplot(age~status,data=m2[m2$gender == "0",])
 boxplot(age~status,data=m2[m2$gender == "1",])
 
@@ -113,7 +115,18 @@ plot(card_train$type)
 
 #---------- Client ------------
 #We can see how the 1st district has more people
-hist(client$district_id)
+hist(client$district_id, breaks=length(client$district_id))
+
+# By gender
+# Men
+hist(client[client$gender == "0",]$age)
+
+# Women
+hist(client[client$gender == "1",]$age)
+
+# Prueba, no borrar
+#mixed <- data.frame(m=client[client$gender == "0",]$age,f=client[client$gender == "1",]$age)
+#ggplot(mixed, aes(length, fill = veg)) + geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity')
 
 hist(client$age)
 
@@ -124,12 +137,13 @@ plot(disp$type)
 
 #---------- Loan --------------
 
-hist(loan_train$duration)
-plot(loan_train$status)
+barplot(table(loan_train$duration))
+barplot(table(loan_train$status))
 hist(loan_train$amount)
-plot(loan_train$status,loan_train$amount)
+plot(loan_train$amount,loan_train$status)
+boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
 plot(loan_train$payments,loan_train$status)
-
+boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
 #---------- Trans -------------
 
 #Most are withdrawals and then credit. 
@@ -147,6 +161,6 @@ summary(trans_train)
 #boxplot(district[,4:16])
 #boxplot(loan_train$amount)
 
-# For cleaning environment
+# For cleaning the workspace
 # closeAllConnections()
 # rm(list=ls())
