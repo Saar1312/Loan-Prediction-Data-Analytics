@@ -41,11 +41,21 @@ checkNa <- function(frames)
 
 #------------------ DATES -------------------------
 
+formatYear <- function(date)
+{
+	if (substr(toString(date),1,2) < "11"){
+		return(date + 20000000)
+	} else{
+		return(date + 19000000)
+	}
+}
+
 # Takes out the +50 months if date is the birthday of a female client  
 formatDate <- function(date)
 {
-	if (substr(toString(date),3,4) > "12"){
-		return(date-5000)
+	date = formatYear(date)
+	if (substr(toString(date),5,6) > "12"){
+		return(date - 5000)
 	} else {
 		return(date)
 	}
@@ -65,7 +75,7 @@ getGender <- function(date)
 getAntiquity <- function(date, refDate)
 {
 	return(difftime(strptime(toString(refDate), format = "%y%m%d"),
-	strptime(paste("19",toString(formatDate(date)),sep=""), format = "%Y%m%d"),units="weeks")/52.25)
+	strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks")/52.25)
 }
 
 mergeTables <- function(df1,df2,colName)

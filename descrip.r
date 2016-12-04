@@ -5,7 +5,15 @@ Extradition of knowledge and Machine Learning
 	Authors: Samuel Arleo & Daniela Socas
 
 Last modified 12/02/2016
-Descriptive functions to start the project and pre-processing"
+Descriptive functions to start the project and pre-processing
+"
+
+#------------------ LOAD PACKAGES --------------------------
+
+if(! "lubridate" %in% rownames(installed.packages())){
+	install.packages("lubridate")
+}
+library(lubridate)
 
 #------------------ LOAD FUNCTIONS -------------------------
 
@@ -36,21 +44,6 @@ dframes <- list(account, card_test, card_train, client, disp, district, loan_tes
 # Checking number of NA field for each table
 checkNa(dframes)
 
-#------------------ DATES -------------------------
-
-#Date columns in date POSIX type better than int 
-
-account$date <-  ymd(account$date)
-card_train$issued <- ymd(card_train$issued)
-card_test$issued <- ymd(card_test$issued)
-loan_train$date <- ymd(loan_train$date)
-loan_test$date <- ymd(loan_test$date)
-trans_train$date <- ymd(trans_train$date)
-trans_test$date <- ymd(trans_test$date)
-
-#Have to change the +50 months 
-client$birth_number <- ymd(client$birth_number)
-
 #------------------ Factors to int -------------------------
 
 trans_train$balance <- as.numeric(as.character(trans_train$balance))
@@ -72,6 +65,21 @@ client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
 
 #Exact age 
 client$age<-round(client$age)
+
+#------------------ CHANGING DATES FORMAT -------------------------
+
+#Date columns in date POSIX type better than int 
+
+account$date <-  ymd(account$date)
+card_train$issued <- ymd(card_train$issued)
+card_test$issued <- ymd(card_test$issued)
+loan_train$date <- ymd(loan_train$date)
+loan_test$date <- ymd(loan_test$date)
+trans_train$date <- ymd(trans_train$date)
+trans_test$date <- ymd(trans_test$date)
+
+#Have to change the +50 months 
+client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
 # Joining disp (table that maps clients IDs to accounts IDs) and client tables by client_id
 m1 = mergeTables(disp[,c("client_id","account_id")], client[,c("client_id","gender","age")],"client_id")
@@ -101,7 +109,7 @@ barplot(c1,main = "Gender-Status frequencies")
 #---------- Card -------------
 
 #Frequency types card
-plot(card_train.csv$type)
+plot(card_train$type)
 
 #---------- Client ------------
 #We can see how the 1st district has more people
@@ -139,3 +147,6 @@ summary(trans_train)
 #boxplot(district[,4:16])
 #boxplot(loan_train$amount)
 
+# For cleaning environment
+# closeAllConnections()
+# rm(list=ls())
