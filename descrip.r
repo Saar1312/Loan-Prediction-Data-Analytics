@@ -1,11 +1,11 @@
-
 "
 Faculty of Engineering. University of Porto
 Extradition of knowledge and Machine Learning
 	Authors: Samuel Arleo & Daniela Socas
 
 Last modified 12/02/2016
-Descriptive functions to start the project and pre-processing"
+Descriptive functions to start the project and pre-processing
+"
 
 #------------------ LOAD FUNCTIONS -------------------------
 
@@ -33,7 +33,7 @@ loadData( path ,na_values)
 dframes <- list(account, card_test, card_train, client, disp, district, loan_test, 
             loan_train, trans_test, trans_train)
 
-# Checking number of NA field for each table
+# Checking number of NA fields for each table
 checkNa(dframes)
 
 #------------------ CLEANING AGE/GENDER -------------------------
