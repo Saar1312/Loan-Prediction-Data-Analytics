@@ -39,7 +39,7 @@ na_values <- c(""," ","NA","?")
 
 loadData( path ,na_values)
 
-# Putting al tables in a list for passing them to checkNA
+# Putting all tables in a list for passing them to checkNA
 dframes <- list(account, card_test, card_train, client, disp, district, loan_test, 
             loan_train, trans_test, trans_train)
 
@@ -54,10 +54,9 @@ trans_train$amount <- as.numeric(as.character(trans_train$amount))
 trans_test$balance <- as.numeric(as.character(trans_test$balance))
 trans_test$amount <- as.numeric(as.character(trans_test$amount))
 
-#------------------ CLEANING AGE/GENDER -------------------------
+#------------------ GETTING AGE/GENDER -------------------------
 
-# Max date on client$birth_number, card$issued to avoid considering dates like 11-01-01 as 2011-01-01 but 1911-01-01
-# because data is older than 
+# Max date on client$birth_number, card$issued to avoid considering dates like 11-01-01 as 2011-01-01
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
                trans_train$date,trans_test$date,loan_test$date,loan_train$date)
 
@@ -83,7 +82,7 @@ trans_test$date <- ymd(trans_test$date)
 #Have to change the +50 months 
 client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
-# Joining disp (table that maps clients IDs to accounts IDs) and client tables by client_id
+# Joining disp (table that maps clients IDs to accounts IDs) and client table by client_id
 m1 = mergeTables(disp[,c("client_id","account_id")], client[,c("client_id","gender","age")],"client_id")
 
 # Joining m1 with loan data by account_id
