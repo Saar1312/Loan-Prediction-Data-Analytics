@@ -99,19 +99,19 @@ client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 # Creating global user info table
 
 # Matching users with accounts
-m1 = mergeTables(disp, client[,!(names(client)%in%c("birth_number"))],"client_id")
+m1 = merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
 
 # Matching users and their accounts with loans
-m2 = mergeTables(m1,loan_train,"account_id")
+m2 = merge(m1,loan_train,by="account_id")
 
 # Matching users with their districts
 # There will be redundant info but it will make easier to calculare for instace:
 # What is the loan performance by region
 colnames(district)[1]<-"district_id"
-m3 = mergeTables(m2,district[,!(names(district)%in%c("code"))],"district_id")
+m3 = merge(m2,district[,!(names(district)%in%c("code"))],by="district_id")
 
 # Matching users with credit cards
-m4 = mergeTables(m3,card_train,"disp_id")
+m4 = merge(m3,card_train,by="disp_id", all.y=TRUE)
 
 # Matching users with summary of transactions of their accounts
 
