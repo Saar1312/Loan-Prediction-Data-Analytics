@@ -54,15 +54,28 @@ trans_train$amount <- as.numeric(as.character(trans_train$amount))
 trans_test$balance <- as.numeric(as.character(trans_test$balance))
 trans_test$amount <- as.numeric(as.character(trans_test$amount))
 
-#------------------ GETTING AGE/GENDER -------------------------
+# Adding columns to tables: 
+#	client: age and gender
+#	card_train: weeks (of usage)
+#	account: antiquity (of the account)
+#	loan_train: current_time (how long was the loan granted)
 
 # Max date on client$birth_number, card$issued to avoid considering dates like 11-01-01 as 2011-01-01
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
                trans_train$date,trans_test$date,loan_test$date,loan_train$date)
 
-# Adding new columns of gender and age to client table
+# Adding new columns of age and gender to client table
 client$gender<-unlist(lapply(client$birth_number,getGender))
 client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
+
+# Adding weeks to card
+card_train$weeks <- unlist(lapply(card_train$issued,getAntiquity,refDate,"weeks"))
+
+# Adding antiquity to account
+account$antiquity <- unlist(lapply(account$date,getAntiquity,refDate,"weeks"))
+
+# Adding current_time to loan
+loan_train$current_time <- unlist(lapply(loan_train$date,getAntiquity,refDate,"weeks"))
 
 #Exact age 
 client$age<-round(client$age)
@@ -82,11 +95,26 @@ trans_test$date <- ymd(trans_test$date)
 #Have to change the +50 months 
 client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
-# Joining disp (table that maps clients IDs to accounts IDs) and client table by client_id
-m1 = mergeTables(disp[,c("client_id","account_id")], client[,c("client_id","gender","age")],"client_id")
 
-# Joining m1 with loan data by account_id
-m2 = mergeTables(m1,loan_train[,c("account_id","status")],"account_id")
+# Creating global user info table
+
+# Matching users with accounts
+m1 = mergeTables(disp, client[,!(names(client)%in%c("birth_number"))],"client_id")
+
+# Matching users and their accounts with loans
+m2 = mergeTables(m1,loan_train,"account_id")
+
+# Matching users with their districts
+# There will be redundant info but it will make easier to calculare for instace:
+# What is the loan performance by region
+colnames(district)[1]<-"district_id"
+m3 = mergeTables(m2,district[,!(names(district)%in%c("code"))],"district_id")
+
+# Matching users with credit cards
+m4 = mergeTables(m3,card_train,"disp_id")
+
+# Matching users with summary of transactions of their accounts
+
 
 #------------------ PLOTS -------------------------
 

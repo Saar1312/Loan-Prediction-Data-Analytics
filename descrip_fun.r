@@ -72,10 +72,15 @@ getGender <- function(date)
 }
 
 # Difference in time (weeks) between given date and reference date
-getAntiquity <- function(date, refDate)
+getAntiquity <- function(date, refDate, type = "years")
 {
-	return(difftime(strptime(toString(refDate), format = "%y%m%d"),
-	strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks")/52.25)
+	if (type == "years"){
+		return(difftime(strptime(toString(refDate), format = "%y%m%d"),
+		strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks")/52.25)
+	} else {
+		return(difftime(strptime(toString(refDate), format = "%y%m%d"),
+		strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks"))
+	}
 }
 
 mergeTables <- function(df1,df2,colName)
