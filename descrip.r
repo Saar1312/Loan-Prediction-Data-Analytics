@@ -98,23 +98,32 @@ client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
 # Creating global user info table
 
-# Matching users with accounts
-m1 = merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
-
-# Matching users and their accounts with loans
-m2 = merge(m1,loan_train,by="account_id")
-
-# Matching users with their districts
+# Matching users with their accounts, loans, districts and credit cards
 # There will be redundant info but it will make easier to calculare for instace:
 # What is the loan performance by region
-colnames(district)[1]<-"district_id"
-m3 = merge(m2,district[,!(names(district)%in%c("code"))],by="district_id")
+global = merge(
+		merge(
+			merge(
+				merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id"),
+					loan_train,by="account_id"),district[,!(names(district)%in%c("code"))],
+					by="district_id"),card_train,by="disp_id", all.x=TRUE)
 
-# Matching users with credit cards
-m4 = merge(m3,card_train,by="disp_id", all.y=TRUE)
 
-# Matching users with summary of transactions of their accounts
+# Getting additional features from existing attributes in global table
 
+# Impact of district over loan status
+
+
+# Hacer funcion que automatice esto para cualquier feature nominal como type.x
+reg_perf <- table(global$district_id,global$status)
+reg_perf <- reg_perf + 1
+avg <- mean(reg_perf[,1]+reg_perf[,2])
+reg_perf<-(reg_perf[,1]-reg_perf[,2])/avg
+reg_perf <- as.data.frame(reg_perf)
+reg_perf$district_id<-rownames(reg_perf)
+global<-merge(global,reg_perf, by="district_id")
+
+# 
 
 #------------------ PLOTS -------------------------
 
@@ -123,14 +132,14 @@ m4 = merge(m3,card_train,by="disp_id", all.y=TRUE)
 plot(account$frequency)
 
 # Age vs Status
-boxplot(age~status,data=m2)
+boxplot(age~status,data=global)
 
 # By gender 0: Male 1: Female
-boxplot(age~status,data=m2[m2$gender == "0",])
-boxplot(age~status,data=m2[m2$gender == "1",])
+boxplot(age~status,data=global[global$gender == "0",])
+boxplot(age~status,data=global[global$gender == "1",])
 
 # Contingency table for gender vs status
-c1 <- table(m2$gender,m2$status)
+c1 <- table(global$gender,global$status)
 
 # Barplot gender vs status
 barplot(c1,main = "Gender-Status frequencies")
