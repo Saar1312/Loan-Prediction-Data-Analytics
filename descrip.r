@@ -19,9 +19,14 @@ if(! "ggplot2" %in% rownames(installed.packages())){
 if(! "party" %in% rownames(installed.packages())){
 	install.packages("party")
 }
+if(! "rpart" %in% rownames(installed.packages())){
+	install.packages("rpart")
+}
+
 library(lubridate)
 library(ggplot2)
 library(party)
+library(rpart)
 
 ################################## LOAD FUNCTIONS ####################################
 
@@ -137,7 +142,7 @@ global<-merge(global,reg_perf, by="district_id")
 
 
 
-
+# Cuando se tenga un modelo, probar si este atributo tiene impacto sobre la prediccion
 # Hacer funcion que automatice esto para cualquier feature nominal como type.x
 # Sacar matriz de correlaciones cuando se tengan todos los atributos numericos, para saber
 # por ejemplo si el numero de prestamos exitosos o no exitosos por region esta correlacionado
@@ -146,24 +151,24 @@ global<-merge(global,reg_perf, by="district_id")
 
 ###################################### PLOTS/TABLES ########################################
 
+#--------------------- USER -----------------------
 
-
-#---------- Account ----------
-#Most frequent by far is monthly issuance
-plot(account$frequency)
-
-# Age vs Status
+# Boxplot: Age vs Status
 boxplot(age~status,data=global)
 
-# By gender 0: Male 1: Female
+# Boxplot: Age vs Status by genders (0: Male 1: Female)
 boxplot(age~status,data=global[global$gender == "0",])
 boxplot(age~status,data=global[global$gender == "1",])
 
-# Contingency table for gender vs status
+# Contingency table: gender vs status
 c1 <- table(global$gender,global$status)
 
-# Barplot gender vs status
+# Barplot: gender vs status
 barplot(c1,main = "Gender-Status frequencies")
+
+#--------------------- Account -----------------------
+#Most frequent by far is monthly issuance
+plot(account$frequency)
 
 #---------- Card -------------
 
@@ -224,19 +229,16 @@ summary(trans_train)
 
 
 
-#########################################PREDICTIVE SECTION##############################################
+#################################### PREDICTIVE SECTION #####################################
 # Esto despues lo cambiamos a otro archivo
-png(file="decision_tree.png")
 
-output_tree <- ctree(
-	status ~ gender + age + amount + duration + payments + current_time
-		   + average.salary + reg_perf,
-	data = global)
+model <- rpart( status ~ gender + age + name + amount + duration + payments + current_time
+		   + average.salary + reg_perf, data=global ) 
 
+summary(model)
+plot(model)
+text(model)
 
-
-plot(output_tree)
-dev.off()
 # - Revisar que modelos hay
 # - Revisar como hacer un ensemble
 # - Hace falta validar el modelo por ejemplo con validacion cruzada?
