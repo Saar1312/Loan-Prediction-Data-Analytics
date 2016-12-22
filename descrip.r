@@ -12,19 +12,25 @@ Descriptive functions to start the project and pre-processing
 
 if(! "lubridate" %in% rownames(installed.packages())){
 	install.packages("lubridate")
+}
+if(! "ggplot2" %in% rownames(installed.packages())){
 	install.packages("ggplot2")
+}
+if(! "party" %in% rownames(installed.packages())){
+	install.packages("party")
 }
 library(lubridate)
 library(ggplot2)
+library(party)
 
-#------------------ LOAD FUNCTIONS -------------------------
+################################## LOAD FUNCTIONS ####################################
 
 #wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
 wd <- "~/Mineria/"
 
 source(paste(wd, "descrip_fun.r", sep=""))
 
-#------------------ LOAD DATA -------------------------
+##################################### LOAD DATA ######################################
 
 # Table files names
 tables <- c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
@@ -37,6 +43,7 @@ path <- "~/Mineria/Data/"
 # Values of empty fields in .csv files
 na_values <- c(""," ","NA","?")
 
+
 loadData( path ,na_values)
 
 # Putting all tables in a list for passing them to checkNA
@@ -46,7 +53,7 @@ dframes <- list(account, card_test, card_train, client, disp, district, loan_tes
 # Checking number of NA field for each table
 checkNa(dframes)
 
-#------------------ Factors to int -------------------------
+################################ FACTORS TO NUMERIC ###################################
 
 trans_train$balance <- as.numeric(as.character(trans_train$balance))
 trans_train$amount <- as.numeric(as.character(trans_train$amount))
@@ -54,15 +61,17 @@ trans_train$amount <- as.numeric(as.character(trans_train$amount))
 trans_test$balance <- as.numeric(as.character(trans_test$balance))
 trans_test$amount <- as.numeric(as.character(trans_test$amount))
 
-# Adding columns to tables: 
-#	client: age and gender
-#	card_train: weeks (of usage)
-#	account: antiquity (of the account)
-#	loan_train: current_time (how long was the loan granted)
-
-# Max date on client$birth_number, card$issued to avoid considering dates like 11-01-01 as 2011-01-01
+# Setting max date to avoid considering 11-01-01 as 2011-01-01 for instance
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
                trans_train$date,trans_test$date,loan_test$date,loan_train$date)
+
+############################## TAKING INFO FROM DATES #################################
+# Adding more meaningful columns to tables based on dates:
+#	TABLE 		| COLUMNS
+#	client 		| age and gender
+#	card_train  | weeks (of usage)
+#	account  	| antiquity (of the account)
+#	loan_train  | current_time (how long was the loan granted)
 
 # Adding new columns of age and gender to client table
 client$gender<-unlist(lapply(client$birth_number,getGender))
@@ -77,12 +86,11 @@ account$antiquity <- unlist(lapply(account$date,getAntiquity,refDate,"weeks"))
 # Adding current_time to loan
 loan_train$current_time <- unlist(lapply(loan_train$date,getAntiquity,refDate,"weeks"))
 
-#Exact age 
+# Exact age 
 client$age<-round(client$age)
 
-#------------------ CHANGING DATES FORMAT -------------------------
-
-#Date columns in date POSIX type better than int 
+################################ CHANGING DATES FORMAT ################################
+# Date columns in date POSIX type better than int 
 
 account$date <-  ymd(account$date)
 card_train$issued <- ymd(card_train$issued)
@@ -91,30 +99,34 @@ loan_train$date <- ymd(loan_train$date)
 loan_test$date <- ymd(loan_test$date)
 trans_train$date <- ymd(trans_train$date)
 trans_test$date <- ymd(trans_test$date)
-
-#Have to change the +50 months 
 client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
 
-# Creating global user info table
+################################ GLOBAL USERS TABLE ################################
+# Global table matches users with their accounts, loans, districts and credit cards
+# to avoid join operations
 
-# Matching users with their accounts, loans, districts and credit cards
-# There will be redundant info but it will make easier to calculare for instace:
-# What is the loan performance by region
+# Changing district table id from code to district_id to join with client table
+colnames(district)[1]<-"district_id"
+
 global = merge(
-		merge(
 			merge(
-				merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id"),
-					loan_train,by="account_id"),district[,!(names(district)%in%c("code"))],
-					by="district_id"),card_train,by="disp_id", all.x=TRUE)
+				merge(
+					merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id"),
+						loan_train,by="account_id"),district[,!(names(district)%in%c("code"))],
+						by="district_id"),card_train,by="disp_id", all.x=TRUE)
 
 
+# Changing variables to nominal	
+global2<-toFactor(global,c("disp_id","district_id","account_id","client_id",
+						   "type.x","gender","loan_id","name","region"))
+
+
+################################ ADDITIONAL FEATURES ################################
 # Getting additional features from existing attributes in global table
 
+
 # Impact of district over loan status
-
-
-# Hacer funcion que automatice esto para cualquier feature nominal como type.x
 reg_perf <- table(global$district_id,global$status)
 reg_perf <- reg_perf + 1
 avg <- mean(reg_perf[,1]+reg_perf[,2])
@@ -123,9 +135,18 @@ reg_perf <- as.data.frame(reg_perf)
 reg_perf$district_id<-rownames(reg_perf)
 global<-merge(global,reg_perf, by="district_id")
 
-# 
 
-#------------------ PLOTS -------------------------
+
+
+# Hacer funcion que automatice esto para cualquier feature nominal como type.x
+# Sacar matriz de correlaciones cuando se tengan todos los atributos numericos, para saber
+# por ejemplo si el numero de prestamos exitosos o no exitosos por region esta correlacionado
+# pero por provincias, asi se quita una de las dos si hay mucha correlacion
+
+
+###################################### PLOTS/TABLES ########################################
+
+
 
 #---------- Account ----------
 #Most frequent by far is monthly issuance
@@ -200,3 +221,23 @@ summary(trans_train)
 # For cleaning the workspace
 # closeAllConnections()
 # rm(list=ls())
+
+
+
+#########################################PREDICTIVE SECTION##############################################
+# Esto despues lo cambiamos a otro archivo
+png(file="decision_tree.png")
+
+output_tree <- ctree(
+	status ~ gender + age + amount + duration + payments + current_time
+		   + average.salary + reg_perf,
+	data = global)
+
+
+
+plot(output_tree)
+dev.off()
+# - Revisar que modelos hay
+# - Revisar como hacer un ensemble
+# - Hace falta validar el modelo por ejemplo con validacion cruzada?
+# - 

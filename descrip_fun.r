@@ -65,9 +65,9 @@ formatDate <- function(date)
 getGender <- function(date)
 {
 	if (substr(toString(date),3,4) <= "12"){
-			return("0")		# 0: Male
+			return(0)		# 0: Male
 	} else {
-			return("1")		# 1: Female
+			return(1)		# 1: Female
 	}
 }
 
@@ -81,6 +81,16 @@ getAntiquity <- function(date, refDate, type = "years")
 		return(difftime(strptime(toString(refDate), format = "%y%m%d"),
 		strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks"))
 	}
+}
+
+# Change columns specified by cols to factor
+toFactor <- function(table, cols)
+{
+	for (c in cols){
+		cat(c)
+		table[c] = as.factor(unlist(table[c]))
+	}
+	return(table)
 }
 
 #------------------ DUDAS -------------------------
