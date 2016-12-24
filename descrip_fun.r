@@ -21,22 +21,11 @@ loadData <- function(path, empty_values)
 
 #------------------ NA VALUES -------------------------
 
-# Counts the number of NA fields in a column 
-countNa <- function(df)
-  {
-    for(col in colnames(df)){
-      cat(col," ",sum(is.na(df[[col]])),"\n")
-      
-    }
-}
-
-# Prints number of NAs for each column
+# Prints number of NAs for each column for each table in frames
 checkNa <- function(frames)
 {
-	for(f in frames){
-		countNa(f)
-		cat("  ###############################\n")
-	}
+	cat("###################### Number of NAs for each column ####################\n")
+	lapply(frames,function(x) sapply(x,function(y) sum(is.na(y))))
 }
 
 #------------------ DATES -------------------------
@@ -85,13 +74,13 @@ getAntiquity <- function(date, refDate, type = "years")
 
 # Change columns specified by cols to factor
 toFactor <- function(table, cols)
-{
-	for (c in cols){
-		cat(c)
-		table[c] = as.factor(unlist(table[c]))
+	{
+		for (c in cols){
+			cat(c)
+			table[c] = as.factor(unlist(table[c]))
+		}
+		return(table)
 	}
-	return(table)
-}
 
 #------------------ DUDAS -------------------------
 

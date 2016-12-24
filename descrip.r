@@ -58,13 +58,19 @@ dframes <- list(account, card_test, card_train, client, disp, district, loan_tes
 # Checking number of NA field for each table
 checkNa(dframes)
 
-################################ FACTORS TO NUMERIC ###################################
+################################### TO NUMERIC #######################################
 
 trans_train$balance <- as.numeric(as.character(trans_train$balance))
 trans_train$amount <- as.numeric(as.character(trans_train$amount))
-
 trans_test$balance <- as.numeric(as.character(trans_test$balance))
 trans_test$amount <- as.numeric(as.character(trans_test$amount))
+district$unemploymant.rate..95 <- as.numeric(district$unemploymant.rate..95)
+
+# Filling NAs with mean
+mean_crimes <- mean(district$no..of.commited.crimes..95[!is.na(district$no..of.commited.crimes..95)])
+district$no..of.commited.crimes..95[is.na(district$no..of.commited.crimes..95)] <- mean_crimes
+mean_unemp <- mean(district$unemploymant.rate..95[!is.na(district$unemploymant.rate..95)])
+district$unemploymant.rate..95[is.na(district$unemploymant.rate..95)] <- mean_unemp
 
 # Setting max date to avoid considering 11-01-01 as 2011-01-01 for instance
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
@@ -82,13 +88,13 @@ refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$da
 client$gender<-unlist(lapply(client$birth_number,getGender))
 client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
 
-# Adding weeks to card
-card_train$weeks <- unlist(lapply(card_train$issued,getAntiquity,refDate,"weeks"))
+# Adding weeks to card (weeks)
+card_train$antiq_card <- unlist(lapply(card_train$issued,getAntiquity,refDate,"weeks"))
 
-# Adding antiquity to account
-account$antiquity <- unlist(lapply(account$date,getAntiquity,refDate,"weeks"))
+# Adding antiquity to account (weeks)
+account$antiq_acc <- unlist(lapply(account$date,getAntiquity,refDate,"weeks"))
 
-# Adding current_time to loan
+# Adding current_time to loan (weeks)
 loan_train$current_time <- unlist(lapply(loan_train$date,getAntiquity,refDate,"weeks"))
 
 # Exact age 
@@ -106,7 +112,6 @@ trans_train$date <- ymd(trans_train$date)
 trans_test$date <- ymd(trans_test$date)
 client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
-
 ################################ GLOBAL USERS TABLE ################################
 # Global table matches users with their accounts, loans, districts and credit cards
 # to avoid join operations
@@ -114,17 +119,26 @@ client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 # Changing district table id from code to district_id to join with client table
 colnames(district)[1]<-"district_id"
 
-global = merge(
-			merge(
-				merge(
-					merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id"),
-						loan_train,by="account_id"),district[,!(names(district)%in%c("code"))],
-						by="district_id"),card_train,by="disp_id", all.x=TRUE)
+# Matching users with accounts
+global <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
 
+# Matching users and their accounts with loans
+global <- merge(global,loan_train,by="account_id")
 
-# Changing variables to nominal	
-global2<-toFactor(global,c("disp_id","district_id","account_id","client_id",
-						   "type.x","gender","loan_id","name","region"))
+# Matching users with their districts
+global <- merge(global,district,by="district_id")
+
+# Matching users with credit cards
+global <- merge(global,card_train,by="disp_id", all.x=TRUE)
+
+# Taking out unnecessary columns
+global <- subset(global, select = c(2,4:7,10:29,31,33))
+
+# Changing type to numerical
+global[12:24]<-sapply(global[12:24],as.numeric)
+
+# Checking NAs
+sapply(global,function(y) sum(is.na(y)))
 
 
 ################################ ADDITIONAL FEATURES ################################
@@ -232,7 +246,7 @@ summary(trans_train)
 #################################### PREDICTIVE SECTION #####################################
 # Esto despues lo cambiamos a otro archivo
 
-model <- rpart( status ~ gender + age + name + amount + duration + payments + current_time
+model <- rpart( status ~ gender + age + amount + duration + payments + current_time
 		   + average.salary + reg_perf, data=global ) 
 
 summary(model)
@@ -242,4 +256,4 @@ text(model)
 # - Revisar que modelos hay
 # - Revisar como hacer un ensemble
 # - Hace falta validar el modelo por ejemplo con validacion cruzada?
-# - 
+
