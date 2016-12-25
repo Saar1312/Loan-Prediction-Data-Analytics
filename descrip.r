@@ -135,7 +135,15 @@ global <- merge(global,card_train,by="disp_id", all.x=TRUE)
 global <- subset(global, select = c(2,4:7,10:29,31,33))
 
 # Changing type to numerical
-global[12:24]<-sapply(global[12:24],as.numeric)
+global[13:24]<-lapply(global[13:24],as.numeric)
+
+
+# Changing numeric variables to  numerical
+#global[,c(13:24)]<-sapply(global[,c(13:24)],as.numeric)
+
+# Changing cate variables to  numerical
+#global[,c(1:4,9,11,12,26)]<-sapply(global[,c(1:4,9,11,12,26)],as.factor)
+
 
 # Checking NAs
 sapply(global,function(y) sum(is.na(y)))
@@ -154,7 +162,8 @@ reg_perf <- as.data.frame(reg_perf)
 reg_perf$district_id<-rownames(reg_perf)
 global<-merge(global,reg_perf, by="district_id")
 
-
+# Taking out district_id column
+global[,!(names(global)%in%c("district_id"))]
 
 # Cuando se tenga un modelo, probar si este atributo tiene impacto sobre la prediccion
 # Hacer funcion que automatice esto para cualquier feature nominal como type.x
@@ -246,8 +255,7 @@ summary(trans_train)
 #################################### PREDICTIVE SECTION #####################################
 # Esto despues lo cambiamos a otro archivo
 
-model <- rpart( status ~ gender + age + amount + duration + payments + current_time
-		   + average.salary + reg_perf, data=global ) 
+model <- rpart( status ~ ., data=global ) 
 
 summary(model)
 plot(model)
@@ -256,4 +264,5 @@ text(model)
 # - Revisar que modelos hay
 # - Revisar como hacer un ensemble
 # - Hace falta validar el modelo por ejemplo con validacion cruzada?
-
+# * Hacer cleaning luego del merge creando tabla global es bueno en algunos aspectos
+# pero si hay que llenar un NA con una media se tiene que hacer antes del merge.
