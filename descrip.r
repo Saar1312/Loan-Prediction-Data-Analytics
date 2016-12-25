@@ -238,7 +238,7 @@ hist(trans_train$amount)
 hist(trans_train$balance)
 
 str(trans_train)
-summary(trans_train)
+#summary(trans_train)
 #------------------ OUTLIERS -------------------------
 
 # Esto es para ver los outliers de las columnas numericas importantes
@@ -250,19 +250,71 @@ summary(trans_train)
 # closeAllConnections()
 # rm(list=ls())
 
-
-
 #################################### PREDICTIVE SECTION #####################################
+
+#----------- Decision tree ------------
+
 # Esto despues lo cambiamos a otro archivo
 
-model <- rpart( status ~ ., data=global ) 
+#model <- rpart( status ~ ., data=global ) 
 
-summary(model)
-plot(model)
-text(model)
+#summary(model)
+#plot(model)
+#text(model)
 
 # - Revisar que modelos hay
 # - Revisar como hacer un ensemble
 # - Hace falta validar el modelo por ejemplo con validacion cruzada?
 # * Hacer cleaning luego del merge creando tabla global es bueno en algunos aspectos
 # pero si hay que llenar un NA con una media se tiene que hacer antes del merge.
+
+#----------- Logistic regression ------------
+
+global$status<-factor(global$status)
+global$gender<-factor(global$gender)
+#global$type.y<-factor(unlist(lapply(global$type.y,function(x) ifelse(is.na(x),0,1))))
+# antiq_card no vale la pena usarla porque solo 10 rows la tienen, igual que type.y (esos son dos atributos de tarjetas de credito)
+# Name da problemas, creo que porque son demasiados.
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = global[,!(colnames(global)%in%c("client_id","district_id","antiq_card","type.y","antiq_card","name"))])
+
+#model_reg <- glm(status~.,family=binomial(link="logit") ,data = global[,c("age","duration","status","gender","amount","reg_perf")])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

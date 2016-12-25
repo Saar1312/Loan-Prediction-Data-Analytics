@@ -25,7 +25,7 @@ loadData <- function(path, empty_values)
 checkNa <- function(frames)
 {
 	cat("###################### Number of NAs for each column ####################\n")
-	lapply(frames,function(x) sapply(x,function(y) sum(is.na(y))))
+	lapply(frames,function(x) lapply(x,function(y) sum(is.na(y))))
 }
 
 #------------------ DATES -------------------------
