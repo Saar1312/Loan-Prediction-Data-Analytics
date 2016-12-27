@@ -90,12 +90,14 @@ client$age<-unlist(lapply(client$birth_number,getAntiquity,refDate))
 
 # Adding weeks to card (weeks)
 card_train$antiq_card <- unlist(lapply(card_train$issued,getAntiquity,refDate,"weeks"))
+card_test$antiq_card <- unlist(lapply(card_test$issued,getAntiquity,refDate,"weeks"))
 
 # Adding antiquity to account (weeks)
 account$antiq_acc <- unlist(lapply(account$date,getAntiquity,refDate,"weeks"))
 
 # Adding current_time to loan (weeks)
 loan_train$current_time <- unlist(lapply(loan_train$date,getAntiquity,refDate,"weeks"))
+loan_test$current_time <- unlist(lapply(loan_test$date,getAntiquity,refDate,"weeks"))
 
 # Exact age 
 client$age<-round(client$age)
@@ -112,58 +114,65 @@ trans_train$date <- ymd(trans_train$date)
 trans_test$date <- ymd(trans_test$date)
 client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
-################################ GLOBAL USERS TABLE ################################
-# Global table matches users with their accounts, loans, districts and credit cards
+################################ global USERS TABLE ################################
+# global table matches users with their accounts, loans, districts and credit cards
 # to avoid join operations
 
 # Changing district table id from code to district_id to join with client table
 colnames(district)[1]<-"district_id"
 
 # Matching users with accounts
-global <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
+global_train <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
 
 # Matching users and their accounts with loans
-global <- merge(global,loan_train,by="account_id")
-
+global_test <- merge(global_train,loan_test,by="account_id")
+global_train <- merge(global_train,loan_train,by="account_id")
+dim(global_train)
+dim(global_test)
 # Matching users with their districts
-global <- merge(global,district,by="district_id")
-
+global_train <- merge(global_train,district,by="district_id")
+global_test <- merge(global_test,district,by="district_id")
+dim(global_train)
+dim(global_test)
 # Matching users with credit cards
-global <- merge(global,card_train,by="disp_id", all.x=TRUE)
-
+global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
+global_test <- merge(global_test,card_test,by="disp_id", all.x=TRUE)
+dim(global_train)
+dim(global_test)
 # Taking out unnecessary columns
-global <- subset(global, select = c(2,4:7,10:29,31,33))
+global_train <- subset(global_train, select = c(2,4:7,10:29,31,33))
+global_test <- subset(global_test, select = c(2,4:7,10:29,31,33))
 
 # Changing type to numerical
-global[13:24]<-lapply(global[13:24],as.numeric)
-
+global_train[13:24]<-lapply(global_train[13:24],as.numeric)
+global_test[13:24]<-lapply(global_test[13:24],as.numeric)
 
 # Changing numeric variables to  numerical
-#global[,c(13:24)]<-sapply(global[,c(13:24)],as.numeric)
+#global_train[,c(13:24)]<-sapply(global_train[,c(13:24)],as.numeric)
 
 # Changing cate variables to  numerical
-#global[,c(1:4,9,11,12,26)]<-sapply(global[,c(1:4,9,11,12,26)],as.factor)
+#global_train[,c(1:4,9,11,12,26)]<-sapply(global_train[,c(1:4,9,11,12,26)],as.factor)
 
 
 # Checking NAs
-sapply(global,function(y) sum(is.na(y)))
+sapply(global_train,function(y) sum(is.na(y)))
 
 
 ################################ ADDITIONAL FEATURES ################################
-# Getting additional features from existing attributes in global table
+# Getting additional features from existing attributes in global_train table
 
 
 # Impact of district over loan status
-reg_perf <- table(global$district_id,global$status)
+reg_perf <- table(global_train$district_id,global_train$status)
 reg_perf <- reg_perf + 1
 avg <- mean(reg_perf[,1]+reg_perf[,2])
 reg_perf<-(reg_perf[,1]-reg_perf[,2])/avg
 reg_perf <- as.data.frame(reg_perf)
 reg_perf$district_id<-rownames(reg_perf)
-global<-merge(global,reg_perf, by="district_id")
+global_train<-merge(global_train,reg_perf, by="district_id")
 
 # Taking out district_id column
-global[,!(names(global)%in%c("district_id"))]
+global_train[,!(names(global_train)%in%c("district_id"))]
 
 # Cuando se tenga un modelo, probar si este atributo tiene impacto sobre la prediccion
 # Hacer funcion que automatice esto para cualquier feature nominal como type.x
@@ -177,14 +186,14 @@ global[,!(names(global)%in%c("district_id"))]
 #--------------------- USER -----------------------
 
 # Boxplot: Age vs Status
-boxplot(age~status,data=global)
+boxplot(age~status,data=global_train)
 
 # Boxplot: Age vs Status by genders (0: Male 1: Female)
-boxplot(age~status,data=global[global$gender == "0",])
-boxplot(age~status,data=global[global$gender == "1",])
+boxplot(age~status,data=global_train[global_train$gender == "0",])
+boxplot(age~status,data=global_train[global_train$gender == "1",])
 
 # Contingency table: gender vs status
-c1 <- table(global$gender,global$status)
+c1 <- table(global_train$gender,global_train$status)
 
 # Barplot: gender vs status
 barplot(c1,main = "Gender-Status frequencies")
@@ -256,7 +265,7 @@ str(trans_train)
 
 # Esto despues lo cambiamos a otro archivo
 
-#model <- rpart( status ~ ., data=global ) 
+#model <- rpart( status ~ ., data=global_train ) 
 
 #summary(model)
 #plot(model)
@@ -265,19 +274,19 @@ str(trans_train)
 # - Revisar que modelos hay
 # - Revisar como hacer un ensemble
 # - Hace falta validar el modelo por ejemplo con validacion cruzada?
-# * Hacer cleaning luego del merge creando tabla global es bueno en algunos aspectos
+# * Hacer cleaning luego del merge creando tabla global_train es bueno en algunos aspectos
 # pero si hay que llenar un NA con una media se tiene que hacer antes del merge.
 
 #----------- Logistic regression ------------
 
-global$status<-factor(global$status)
-global$gender<-factor(global$gender)
-#global$type.y<-factor(unlist(lapply(global$type.y,function(x) ifelse(is.na(x),0,1))))
+global_train$status<-factor(global_train$status)
+global_train$gender<-factor(global_train$gender)
+#global_train$type.y<-factor(unlist(lapply(global_train$type.y,function(x) ifelse(is.na(x),0,1))))
 # antiq_card no vale la pena usarla porque solo 10 rows la tienen, igual que type.y (esos son dos atributos de tarjetas de credito)
 # Name da problemas, creo que porque son demasiados.
-model_reg <- glm(status~.,family=binomial(link="logit") ,data = global[,!(colnames(global)%in%c("client_id","district_id","antiq_card","type.y","antiq_card","name"))])
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,!(colnames(global_train)%in%c("client_id","district_id","antiq_card","type.y","antiq_card","name"))])
 
-#model_reg <- glm(status~.,family=binomial(link="logit") ,data = global[,c("age","duration","status","gender","amount","reg_perf")])
+#model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,c("age","duration","status","gender","amount","reg_perf")])
 
 
 
