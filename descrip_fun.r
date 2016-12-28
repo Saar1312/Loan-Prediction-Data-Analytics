@@ -25,7 +25,51 @@ loadData <- function(path, empty_values)
 checkNa <- function(frames)
 {
 	cat("###################### Number of NAs for each column ####################\n")
-	lapply(frames,function(x) lapply(x,function(y) sum(is.na(y))))
+	lapply(frames,function(x) unlist(lapply(x,function(y) sum(is.na(y)))))
+}
+
+#------------------ TYPES -------------------------
+
+# Finding out if each column is factor
+findFactors <- function(frames)
+{
+	cat("###################### Finding factors ####################\n")
+	lapply(frames,function(x) unlist(lapply(x,function(y) is.factor(y))))
+}
+
+# Getting the class of each column of each table to verify types numeric, integer, etc
+checkClasses <- function(frames)
+{
+	cat("###################### Types of each column ####################\n")
+	lapply(frames,function(x) unlist(lapply(x,function(y) class(y))))
+}
+
+# Getting the type of each column of each table to verify types numeric, integer, etc
+checkType <- function(frames)
+{
+	cat("###################### Types of each column ####################\n")
+	lapply(frames,function(x) unlist(lapply(x,function(y) typeof(y))))
+}
+
+# Change type of columns "cols" in the data frame frame
+toFactor <- function(frame, cols)
+{
+	frame[cols]<-unlist(lapply(frame[cols], as.factor))
+	return(frame)
+}
+
+# Change type of columns "cols" in the data frame frame
+toNumeric <- function(frame, cols)
+{
+	frame[cols]<-unlist(lapply(frame[cols], as.numeric))
+	return(frame)
+}
+
+# Change type of columns "cols" in the data frame frame
+toInteger <- function(frame, cols)
+{
+	frame[cols]<-unlist(lapply(frame[cols], as.integer))
+	return(frame)
 }
 
 #------------------ DATES -------------------------

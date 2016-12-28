@@ -8,7 +8,7 @@ Last modified 12/02/2016
 Descriptive functions to start the project and pre-processing
 "
 
-#------------------ LOAD PACKAGES --------------------------
+#------------------ LOADING PACKAGES --------------------------
 
 if(! "lubridate" %in% rownames(installed.packages())){
 	install.packages("lubridate")
@@ -28,14 +28,14 @@ library(ggplot2)
 library(party)
 library(rpart)
 
-################################## LOAD FUNCTIONS ####################################
+#------------- LOADING DESC. AND PREDICT. MODULES ------------
 
 #wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
 wd <- "~/Mineria/"
 
 source(paste(wd, "descrip_fun.r", sep=""))
 
-##################################### LOAD DATA ######################################
+#---------------------- LOADING DATA -------------------------
 
 # Table files names
 tables <- c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
@@ -48,37 +48,59 @@ path <- "~/Mineria/Data/"
 # Values of empty fields in .csv files
 na_values <- c(""," ","NA","?")
 
-
 loadData( path ,na_values)
 
 # Putting all tables in a list for passing them to checkNA
 dframes <- list(account, card_test, card_train, client, disp, district, loan_test, 
             loan_train, trans_test, trans_train)
 
-# Checking number of NA field for each table
+names(dframes) <- c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
+            "loan_train", "trans_test", "trans_train")
+
+#--------------------- PREPROCESSING -------------------------
+
+#------------- Types ---------------
+
+# Finding out if each column is factor
+findFactors(dframes)
+
+# Getting type of each column of each table to verify types numeric, integer and factor
+checkClasses(dframes)
+
+# Setting correct types (we are not setting ids as factors, 
+# as they won't be included on further analysis)
+# Factor to Numeric
+district<-toNumeric(district,c("unemploymant.rate..95","unemploymant.rate..96",
+													"ratio.of.urban.inhabitants"))
+trans_train<-toNumeric(trans_train,c("amount","balance"))
+trans_test<-toNumeric(trans_test,c("amount","balance"))
+
+# Integer to Factor
+loan_train <- toFactor(loan_train,c("status"))
+loan_test <- toFactor(loan_test,c("status"))
+
+#------------- NAs ---------------
+
+# Getting number of NAs for each table and column
 checkNa(dframes)
 
-################################### TO NUMERIC #######################################
-
-trans_train$balance <- as.numeric(as.character(trans_train$balance))
-trans_train$amount <- as.numeric(as.character(trans_train$amount))
-trans_test$balance <- as.numeric(as.character(trans_test$balance))
-trans_test$amount <- as.numeric(as.character(trans_test$amount))
-district$unemploymant.rate..95 <- as.numeric(district$unemploymant.rate..95)
-
-# Filling NAs with mean
+# Filling NAs in district$no..of.commited.crimes..95 and district$unemploymant.rate..95 with mean
 mean_crimes <- mean(district$no..of.commited.crimes..95[!is.na(district$no..of.commited.crimes..95)])
 district$no..of.commited.crimes..95[is.na(district$no..of.commited.crimes..95)] <- mean_crimes
 mean_unemp <- mean(district$unemploymant.rate..95[!is.na(district$unemploymant.rate..95)])
 district$unemploymant.rate..95[is.na(district$unemploymant.rate..95)] <- mean_unemp
 
+#--------------------- TRANSFORMATION -------------------------
+
+#-------- Formatting dates ------
+
 # Setting max date to avoid considering 11-01-01 as 2011-01-01 for instance
 refDate <- max(client$birth_number,card_train$issued,card_test$issued,account$date,
                trans_train$date,trans_test$date,loan_test$date,loan_train$date)
 
-############################## TAKING INFO FROM DATES #################################
 # Adding more meaningful columns to tables based on dates:
 #	TABLE 		| COLUMNS
+# ---------------------------------
 #	client 		| age and gender
 #	card_train  | weeks (of usage)
 #	account  	| antiquity (of the account)
@@ -102,9 +124,7 @@ loan_test$current_time <- unlist(lapply(loan_test$date,getAntiquity,refDate,"wee
 # Exact age 
 client$age<-round(client$age)
 
-################################ CHANGING DATES FORMAT ################################
 # Date columns in date POSIX type better than int 
-
 account$date <-  ymd(account$date)
 card_train$issued <- ymd(card_train$issued)
 card_test$issued <- ymd(card_test$issued)
@@ -114,9 +134,10 @@ trans_train$date <- ymd(trans_train$date)
 trans_test$date <- ymd(trans_test$date)
 client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
-################################ global USERS TABLE ################################
-# global table matches users with their accounts, loans, districts and credit cards
-# to avoid join operations
+
+#---------- Joining data frames -----------
+# Creating global table matches users with their accounts, loans, districts and credit cards
+# to start the mining process
 
 # Changing district table id from code to district_id to join with client table
 colnames(district)[1]<-"district_id"
@@ -127,25 +148,22 @@ global_train <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="c
 # Matching users and their accounts with loans
 global_test <- merge(global_train,loan_test,by="account_id")
 global_train <- merge(global_train,loan_train,by="account_id")
-dim(global_train)
-dim(global_test)
+
 # Matching users with their districts
 global_train <- merge(global_train,district,by="district_id")
 global_test <- merge(global_test,district,by="district_id")
-dim(global_train)
-dim(global_test)
+
 # Matching users with credit cards
 global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
 global_test <- merge(global_test,card_test,by="disp_id", all.x=TRUE)
-dim(global_train)
-dim(global_test)
+
 # Taking out unnecessary columns
 global_train <- subset(global_train, select = c(2,4:8,10:29,31,33))
 global_test <- subset(global_test, select = c(2,4:8,10:29,31,33))
 
 # Changing type to numerical
-global_train[13:24]<-lapply(global_train[13:24],as.numeric)
-global_test[13:24]<-lapply(global_test[13:24],as.numeric)
+#global_train[13:24]<-lapply(global_train[13:24],as.numeric)
+#global_test[13:24]<-lapply(global_test[13:24],as.numeric)
 
 # Changing numeric variables to  numerical
 #global_train[,c(13:24)]<-sapply(global_train[,c(13:24)],as.numeric)
@@ -153,12 +171,12 @@ global_test[13:24]<-lapply(global_test[13:24],as.numeric)
 # Changing cate variables to  numerical
 #global_train[,c(1:4,9,11,12,26)]<-sapply(global_train[,c(1:4,9,11,12,26)],as.factor)
 
+checkNa(list(global_train))
+checkClasses(list(global_train))
+checkTypes(list(global_train))
 
-# Checking NAs
-sapply(global_train,function(y) sum(is.na(y)))
-
-
-################################ ADDITIONAL FEATURES ################################
+######### CAMBIAR TIPOS DE GLOBAL TABLE EJ GENDER ES FLOAT
+#---------- Additional Features -----------
 # Getting additional features from existing attributes in global_train table
 
 # Impact of district over loan status
