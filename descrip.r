@@ -28,7 +28,7 @@ library(ggplot2)
 library(party)
 library(rpart)
 
-#------------- LOADING DESC. AND PREDICT. MODULES ------------
+#-------------------- LOADING FUNCTIONS ----------------------
 
 #wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
 wd <- "~/Mineria/"
@@ -54,8 +54,8 @@ loadData( path ,na_values)
 dframes <- list(account, card_test, card_train, client, disp, district, loan_test, 
             loan_train, trans_test, trans_train)
 
-names(dframes) <- c("account", "card_test", "card_train", "client", "disp", "district", "loan_test", 
-            "loan_train", "trans_test", "trans_train")
+names(dframes) <- c("account", "card_test", "card_train", "client", "disp", "district", 
+					"loan_test", "loan_train", "trans_test", "trans_train")
 
 #--------------------- PREPROCESSING -------------------------
 
@@ -66,18 +66,26 @@ findFactors(dframes)
 
 # Getting type of each column of each table to verify types numeric, integer and factor
 checkClasses(dframes)
+checkTypes(dframes)
 
 # Setting correct types (we are not setting ids as factors, 
 # as they won't be included on further analysis)
 # Factor to Numeric
-district<-toNumeric(district,c("unemploymant.rate..95","unemploymant.rate..96",
-													"ratio.of.urban.inhabitants"))
-trans_train<-toNumeric(trans_train,c("amount","balance"))
-trans_test<-toNumeric(trans_test,c("amount","balance"))
+district<-toNumeric(district,c("unemploymant.rate..95","unemploymant.rate..96","ratio.of.urban.inhabitants"))
+trans_train<-toNumeric(trans_train,c("balance"))
+trans_test<-toNumeric(trans_test,c("balance"))
 
 # Integer to Factor
 loan_train <- toFactor(loan_train,c("status"))
 loan_test <- toFactor(loan_test,c("status"))
+
+# Integer to string
+district <- toStr(district,c("name","region"))
+
+# Integer to Numeric
+loan_test <- toNumeric(loan_test,c("amount","payments"))
+loan_train <- toNumeric(loan_train,c("amount","payments"))
+district <- toNumeric(district,c("average.salary"))
 
 #------------- NAs ---------------
 
@@ -134,9 +142,9 @@ trans_train$date <- ymd(trans_train$date)
 trans_test$date <- ymd(trans_test$date)
 client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
-
 #---------- Joining data frames -----------
-# Creating global table matches users with their accounts, loans, districts and credit cards
+
+# Creating a global tables that matche users with their accounts, loans, districts and credit cards
 # to start the mining process
 
 # Changing district table id from code to district_id to join with client table
@@ -150,35 +158,16 @@ global_test <- merge(global_train,loan_test,by="account_id")
 global_train <- merge(global_train,loan_train,by="account_id")
 
 # Matching users with their districts
-global_train <- merge(global_train,district,by="district_id")
 global_test <- merge(global_test,district,by="district_id")
+global_train <- merge(global_train,district,by="district_id")
 
 # Matching users with credit cards
-global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
 global_test <- merge(global_test,card_test,by="disp_id", all.x=TRUE)
+global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
 
-# Taking out unnecessary columns
-global_train <- subset(global_train, select = c(2,4:8,10:29,31,33))
-global_test <- subset(global_test, select = c(2,4:8,10:29,31,33))
+#------------ Adding Features ------------
 
-# Changing type to numerical
-#global_train[13:24]<-lapply(global_train[13:24],as.numeric)
-#global_test[13:24]<-lapply(global_test[13:24],as.numeric)
-
-# Changing numeric variables to  numerical
-#global_train[,c(13:24)]<-sapply(global_train[,c(13:24)],as.numeric)
-
-# Changing cate variables to  numerical
-#global_train[,c(1:4,9,11,12,26)]<-sapply(global_train[,c(1:4,9,11,12,26)],as.factor)
-
-checkNa(list(global_train))
-checkClasses(list(global_train))
-checkTypes(list(global_train))
-
-######### CAMBIAR TIPOS DE GLOBAL TABLE EJ GENDER ES FLOAT
-#---------- Additional Features -----------
 # Getting additional features from existing attributes in global_train table
-
 # Impact of district over loan status
 reg_perf <- table(global_train$district_id,global_train$status)
 reg_perf <- reg_perf + 1
@@ -199,16 +188,29 @@ global_test$reg_perf[is.na(global_test$reg_perf)] <- avg_perf
 # Taking out district_id column
 global_test[,!(names(global_test)%in%c("district_id"))]
 
-# Cuando se tenga un modelo, probar si este atributo tiene impacto sobre la prediccion
-# Hacer funcion que automatice esto para cualquier feature nominal como type.x
-# Sacar matriz de correlaciones cuando se tengan todos los atributos numericos, para saber
-# por ejemplo si el numero de prestamos exitosos o no exitosos por region esta correlacionado
-# pero por provincias, asi se quita una de las dos si hay mucha correlacion
+#--------- Deleting some features ---------
 
+# Deleting features that don't give important information (columns with 
+# too many NAs, IDs, etc)
 
-###################################### PLOTS/TABLES ########################################
+# Checking types, classes and NAs of global tables
+# Global Train table
+checkNa(list(global_train))
+checkClasses(list(global_train))
+checkTypes(list(global_train))
 
-#--------------------- USER -----------------------
+# Global Test table
+checkNa(list(global_test))
+checkClasses(list(global_test))
+checkTypes(list(global_test))
+
+# Taking out unnecessary columns
+global_test <- subset(global_test, select = c(2,4:8,10:29))
+global_train <- subset(global_train, select = c(2,4:8,10:29))
+
+#--------------------------- DESCRIPTION ----------------------------
+
+#------------------- User -----------------
 
 # Boxplot: Age vs Status
 boxplot(age~status,data=global_train)
@@ -223,38 +225,21 @@ c1 <- table(global_train$gender,global_train$status)
 # Barplot: gender vs status
 barplot(c1,main = "Gender-Status frequencies")
 
-#--------------------- Account -----------------------
-#Most frequent by far is monthly issuance
-plot(account$frequency)
-
-#---------- Card -------------
-
-#Frequency types card
-plot(card_train$type)
-
-#---------- Client ------------
-#We can see how the 1st district has more people
-hist(client$district_id, breaks=length(client$district_id))
-
-# By gender
+# Histograms: Age
 # Men
 hist(client[client$gender == "0",]$age)
 
 # Women
 hist(client[client$gender == "1",]$age)
 
-# Prueba, no borrar
-#mixed <- data.frame(m=client[client$gender == "0",]$age,f=client[client$gender == "1",]$age)
-#ggplot(mixed, aes(length, fill = veg)) + geom_histogram(alpha = 0.5, aes(y = ..density..), position = 'identity')
+#----------------- Account -----------------
 
-hist(client$age)
-
-#---------- Disp --------------
+#------------------- Disp ------------------
 #Way more OWNERs 
 plot(disp$type)
 
 
-#---------- Loan --------------
+#------------------- Loan ------------------
 
 barplot(table(loan_train$duration))
 barplot(table(loan_train$status))
@@ -263,7 +248,8 @@ plot(loan_train$amount,loan_train$status)
 boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
 plot(loan_train$payments,loan_train$status)
 boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
-#---------- Trans -------------
+
+#--------------- Transactions --------------
 
 #Most are withdrawals and then credit. 
 plot(trans_train$type)
@@ -273,20 +259,10 @@ hist(trans_train$balance)
 
 str(trans_train)
 #summary(trans_train)
-#------------------ OUTLIERS -------------------------
 
-# Esto es para ver los outliers de las columnas numericas importantes
-# Probar al final el modelo entrenado con y sin outliers
-#boxplot(district[,4:16])
-#boxplot(loan_train$amount)
+#--------------------------- PREDICTION ----------------------------
 
-# For cleaning the workspace
-# closeAllConnections()
-# rm(list=ls())
-
-#################################### PREDICTIVE SECTION #####################################
-
-#----------- Decision tree ------------
+#-------------- Decision tree --------------
 
 # Esto despues lo cambiamos a otro archivo
 
@@ -296,13 +272,7 @@ str(trans_train)
 #plot(model)
 #text(model)
 
-# - Revisar que modelos hay
-# - Revisar como hacer un ensemble
-# - Hace falta validar el modelo por ejemplo con validacion cruzada?
-# * Hacer cleaning luego del merge creando tabla global_train es bueno en algunos aspectos
-# pero si hay que llenar un NA con una media se tiene que hacer antes del merge.
-
-#----------- Logistic regression ------------
+#---------- Logistic regression ------------
 
 global_train$status<-factor(global_train$status)
 global_train$gender<-factor(global_train$gender)
@@ -334,3 +304,16 @@ write.table(t2[c("loan_id","status")],file="prediction.csv" ,col.names = c("Id",
 
 
 #model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,c("age","duration","status","gender","amount","reg_perf")])
+
+
+#- Buscar NAs cuando se agrega el reg_perf al global test
+#- Eliminar ultimas columnas (antiq_card y type de tarjeta de credito) Consultar con Daniela
+# Si se va a eliminar, para eso no hacer el join con card_train
+#- En el paso "Cleaning some features", agregar columna de reg_perf
+#- Cambiar nombre de reg_perf a by_region
+
+
+
+# For cleaning the workspace
+# closeAllConnections()
+# rm(list=ls())
