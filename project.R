@@ -12,7 +12,7 @@ loadData <- function(tables_names, path, empty_values)
 	return(tables)
 }
 
-# Counts the number of NA fields in a column 
+# Counts the number of NA fields in a column
 countNa <- function(df)
 {
     for(col in names(df)){

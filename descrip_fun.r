@@ -21,22 +21,55 @@ loadData <- function(path, empty_values)
 
 #------------------ NA VALUES -------------------------
 
-# Counts the number of NA fields in a column 
-countNa <- function(df)
-  {
-    for(col in colnames(df)){
-      cat(col," ",sum(is.na(df[[col]])),"\n")
-      
-    }
-}
-
-# Prints number of NAs for each column
+# Prints number of NAs for each column for each table in frames
 checkNa <- function(frames)
 {
-	for(f in frames){
-		countNa(f)
-		cat("  ###############################\n")
-	}
+	cat("###################### Number of NAs for each column ####################\n")
+	lapply(frames,function(x) unlist(lapply(x,function(y) sum(is.na(y)))))
+}
+
+#------------------ TYPES -------------------------
+
+# Finding out if each column is factor
+findFactors <- function(frames)
+{
+	cat("###################### Finding factors ####################\n")
+	lapply(frames,function(x) unlist(lapply(x,function(y) is.factor(y))))
+}
+
+# Getting the class of each column of each table to verify types numeric, integer, etc
+checkClasses <- function(frames)
+{
+	cat("###################### Types of each column ####################\n")
+	lapply(frames,function(x) unlist(lapply(x,function(y) class(y))))
+}
+
+# Getting the type of each column of each table to verify types numeric, integer, etc
+checkType <- function(frames)
+{
+	cat("###################### Types of each column ####################\n")
+	lapply(frames,function(x) unlist(lapply(x,function(y) typeof(y))))
+}
+
+# Change type of columns "cols" in the data frame frame
+toFactor <- function(frame, cols)
+{
+	frame[cols]<-unlist(lapply(frame[cols], as.factor))
+	return(frame)
+}
+
+# Change type of columns "cols" in the data frame frame
+toNumeric <- function(frame, cols)
+{
+	frame[cols]<-unlist(lapply(frame[cols], as.numeric))
+	return(frame)
+}
+
+# Change type of columns "cols" in the data frame frame
+toInteger <- function(frame, cols)
+{
+	frame[cols]<-unlist(lapply(frame[cols], as.integer))
+	return(frame)
 }
 
 #------------------ DATES -------------------------
@@ -65,24 +98,33 @@ formatDate <- function(date)
 getGender <- function(date)
 {
 	if (substr(toString(date),3,4) <= "12"){
-			return("0")		# 0: Male
+			return(0)		# 0: Male
 	} else {
-			return("1")		# 1: Female
+			return(1)		# 1: Female
 	}
 }
 
 # Difference in time (weeks) between given date and reference date
-getAntiquity <- function(date, refDate)
+getAntiquity <- function(date, refDate, type = "years")
 {
-	return(difftime(strptime(toString(refDate), format = "%y%m%d"),
-	strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks")/52.25)
+	if (type == "years"){
+		return(difftime(strptime(toString(refDate), format = "%y%m%d"),
+		strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks")/52.25)
+	} else {
+		return(difftime(strptime(toString(refDate), format = "%y%m%d"),
+		strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks"))
+	}
 }
 
-mergeTables <- function(df1,df2,colName)
-{
-	merge(df1,df2,by=colName)
-}
-
+# Change columns specified by cols to factor
+toFactor <- function(table, cols)
+	{
+		for (c in cols){
+			cat(c)
+			table[c] = as.factor(unlist(table[c]))
+		}
+		return(table)
+	}
 
 #------------------ DUDAS -------------------------
 
