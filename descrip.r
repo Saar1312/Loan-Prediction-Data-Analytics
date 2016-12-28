@@ -168,25 +168,14 @@ global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
 #------------ Adding Features ------------
 
 # Getting additional features from existing attributes in global_train table
-# Impact of district over loan status
-reg_perf <- table(global_train$district_id,global_train$status)
-reg_perf <- reg_perf + 1
-avg <- mean(reg_perf[,1]+reg_perf[,2])
-reg_perf<-(reg_perf[,1]-reg_perf[,2])/avg
-reg_perf <- as.data.frame(reg_perf)
-reg_perf$district_id<-rownames(reg_perf)
-global_train<-merge(global_train,reg_perf, by="district_id")
+# Influence of district over loan status
+global_train <- featureRate(global_train,c("district_id"))
 
-# Taking out district_id column
-global_train[,!(names(global_train)%in%c("district_id"))]
-
-# Impact of district over loan status
-avg_perf <- mean(reg_perf$reg_perf)
-global_test<-merge(global_test,reg_perf, by="district_id", all.x=TRUE)
-global_test$reg_perf[is.na(global_test$reg_perf)] <- avg_perf
-
-# Taking out district_id column
-global_test[,!(names(global_test)%in%c("district_id"))]
+# Add column with influence of district over loan status
+tmp <- as.data.frame(global_train[c("district_id","district_id.rates")])
+avg_perf <- mean(tmp$district_id.rates)
+global_test<-merge(global_test,tmp, by="district_id", all.x=TRUE)
+global_test$district_id.rates[is.na(global_test$district_id.rates)] <- avg_perf
 
 #--------- Deleting some features ---------
 
@@ -311,7 +300,7 @@ write.table(t2[c("loan_id","status")],file="prediction.csv" ,col.names = c("Id",
 # Si se va a eliminar, para eso no hacer el join con card_train
 #- En el paso "Cleaning some features", agregar columna de reg_perf
 #- Cambiar nombre de reg_perf a by_region
-
+#- Quitar disctrict_id de global_test y train
 
 
 # For cleaning the workspace

@@ -11,9 +11,9 @@ options(scipen=999)
 # Loading data
 loadData <- function(path, empty_values)
 {
-	files <- list.files(path)
+	files = list.files(path)
 	for (i in files){
-		a <- read.csv2(paste(path,i,sep=""), header = TRUE, na.strings=na_values)
+		a = read.csv2(paste(path,i,sep=""), header = TRUE, na.strings=na_values)
 		assign(unlist(strsplit(i,"[.]"))[1], a, envir = .GlobalEnv)
 	}
 	remove(a)
@@ -54,27 +54,27 @@ checkType <- function(frames)
 # Change type of columns "cols" in the data frame frame
 toFactor <- function(frame, cols)
 {
-	frame[cols]<-unlist(lapply(frame[cols], as.factor))
+	frame[cols] = unlist(lapply(frame[cols], as.factor))
 	return(frame)
 }
 
 # Change type of columns "cols" in the data frame frame
 toNumeric <- function(frame, cols)
 {
-	frame[cols]<-unlist(lapply(frame[cols], as.numeric))
+	frame[cols] = unlist(lapply(frame[cols], as.numeric))
 	return(frame)
 }
 
 # Change type of columns "cols" in the data frame frame
 toInteger <- function(frame, cols)
 {
-	frame[cols]<-unlist(lapply(frame[cols], as.integer))
+	frame[cols] = unlist(lapply(frame[cols], as.integer))
 	return(frame)
 }
 
 toStr <- function(frame, cols)
 {
-	frame[cols]<-unlist(lapply(frame[cols], as.character))
+	frame[cols] = unlist(lapply(frame[cols], as.character))
 	return(frame)
 }
 
@@ -120,6 +120,21 @@ getAntiquity <- function(date, refDate, type = "years")
 		return(difftime(strptime(toString(refDate), format = "%y%m%d"),
 		strptime(toString(formatDate(date)), format = "%Y%m%d"),units="weeks"))
 	}
+}
+
+#------------------ TYPES -------------------------
+
+featureRate <- function(frame, feature)
+{
+    rates = table(unlist(frame[feature]),frame$status)		# Count instances of each value in column feature
+    rates = rates + 1										# Avoid further division by 0
+    avg = mean(rates[,1]+rates[,2]) 						# Average of the counts
+    rates = (rates[,1]-rates[,2])/avg 						# Calculate the actual rate: (num_positive-num_negatives)/avg
+    rates = as.data.frame(rates)
+    rates[feature] = rownames(rates) 						# Maps rates with values of column "feature"
+    res = merge(frame,rates, by=feature[1])# Add column with ratings to frame table
+	names(res)[names(res) == "rates"] = paste(feature[1],".rates",sep="")
+	return(res)
 }
 
 #------------------ DUDAS -------------------------
