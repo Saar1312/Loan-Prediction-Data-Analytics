@@ -140,8 +140,8 @@ global_test <- merge(global_test,card_test,by="disp_id", all.x=TRUE)
 dim(global_train)
 dim(global_test)
 # Taking out unnecessary columns
-global_train <- subset(global_train, select = c(2,4:7,10:29,31,33))
-global_test <- subset(global_test, select = c(2,4:7,10:29,31,33))
+global_train <- subset(global_train, select = c(2,4:8,10:29,31,33))
+global_test <- subset(global_test, select = c(2,4:8,10:29,31,33))
 
 # Changing type to numerical
 global_train[13:24]<-lapply(global_train[13:24],as.numeric)
@@ -161,7 +161,6 @@ sapply(global_train,function(y) sum(is.na(y)))
 ################################ ADDITIONAL FEATURES ################################
 # Getting additional features from existing attributes in global_train table
 
-
 # Impact of district over loan status
 reg_perf <- table(global_train$district_id,global_train$status)
 reg_perf <- reg_perf + 1
@@ -173,6 +172,14 @@ global_train<-merge(global_train,reg_perf, by="district_id")
 
 # Taking out district_id column
 global_train[,!(names(global_train)%in%c("district_id"))]
+
+# Impact of district over loan status
+avg_perf <- mean(reg_perf$reg_perf)
+global_test<-merge(global_test,reg_perf, by="district_id", all.x=TRUE)
+global_test$reg_perf[is.na(global_test$reg_perf)] <- avg_perf
+
+# Taking out district_id column
+global_test[,!(names(global_test)%in%c("district_id"))]
 
 # Cuando se tenga un modelo, probar si este atributo tiene impacto sobre la prediccion
 # Hacer funcion que automatice esto para cualquier feature nominal como type.x
@@ -281,49 +288,31 @@ str(trans_train)
 
 global_train$status<-factor(global_train$status)
 global_train$gender<-factor(global_train$gender)
+global_test$gender<-factor(global_test$gender)
+
+global_train$id<-rownames(global_train)
+global_test$id<-rownames(global_test)
+
 #global_train$type.y<-factor(unlist(lapply(global_train$type.y,function(x) ifelse(is.na(x),0,1))))
 # antiq_card no vale la pena usarla porque solo 10 rows la tienen, igual que type.y (esos son dos atributos de tarjetas de credito)
 # Name da problemas, creo que porque son demasiados.
-model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,!(colnames(global_train)%in%c("client_id","district_id","antiq_card","type.y","antiq_card","name"))])
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,!(colnames(global_train)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))])
+
+res <- predict(model_reg,newdata=global_test[,!(colnames(global_test)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))],type='response')
+
+res <- as.data.frame(res)
+names(res) <- "p"
+res$id<-rownames(res)
+res$loan_id <- merge(global_test,res,by="id")$loan_id
+res$status <- ifelse(res$p > 0.65,1,-1)
+
+t <- table(res$loan_id,res$status)
+t2 <- data.frame(loan_id = rownames(t),bad = t[,1], good=t[,2])
+t2$status<-ifelse(t2$good>=t2$bad,1,-1)
+rownames(t2) <- NULL
+write.table(t2[c("loan_id","status")],file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
+#misClasificError <- mean(fitted.results != test$Survived)
+#print(paste('Accuracy',1-misClasificError))
+
 
 #model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,c("age","duration","status","gender","amount","reg_perf")])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
