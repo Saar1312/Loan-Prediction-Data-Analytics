@@ -21,7 +21,6 @@ if(! "party" %in% rownames(installed.packages())){
 if(! "rpart" %in% rownames(installed.packages())){
   install.packages("rpart")
 }
-
 if(! "DMwR" %in% rownames(installed.packages())){
   install.packages("DMwR")
 }
@@ -275,14 +274,15 @@ columns<- c(
     "status","current_time", "name","region", "no..of.inhabitants", 
     "no..of.municipalities.with.inhabitants...499", "no..of.municipalities.with.inhabitants.500.1999", 
     "no..of.municipalities.with.inhabitants.2000.9999", "no..of.municipalities.with.inhabitants..10000",    
-    "no..of.cities", "ratio.of.urban.inhabitants","average_salary" ,"unemploymant.rate..95","unemploymant.rate..96",
+    "no..of.cities", "ratio.of.urban.inhabitants","average.salary" ,"unemploymant.rate..95","unemploymant.rate..96",
     "no..of.enterpreneurs.per.1000.inhabitants", "no..of.commited.crimes..95", "no..of.commited.crimes..96",
     "balance_mean", "balance_sd","balance_min", "balance_max"                        
 )
 
 # Selecting relevant features
-global_test <- global_test(columns[])
-global_train <- global_train(columns)
+features <- columns[c(1:4,6:29)]
+global_test <- global_test[features]
+global_train <- global_train[features]
 
 global_train$id<-rownames(global_train)
 global_test$id<-rownames(global_test)
@@ -314,9 +314,6 @@ hist(client[client$gender == "1",]$age)
 #----------------- Account -----------------
 
 #------------------- Disp ------------------
-#Way more OWNERs 
-plot(disp$type)
-
 
 #------------------- Loan ------------------
 
@@ -357,15 +354,16 @@ globals <- get_sample(global_train,70)
 #---------- Logistic regression ------------
 # QUIZA: no..of.inhabitants, no..of.municipalities.with.inhabitants...499, (esta si)no..of.municipalities.with.inhabitants.500.1999, (si)no..of.cities, (si)unemploymant.rate..95, (quiza) no..of.commited.crimes..96, balance_max (quiza)
 # NO: no..of.municipalities.with.inhabitants..10000, no..of.municipalities.with.inhabitants.2000.9999, no..of.municipalities.with.inhabitants..10000, ratio.of.urban.inhabitants, average.salary, unemploymant.rate..96, no..of.enterpreneurs.per.1000.inhabitants, no..of.commited.crimes..95, 
-attributes <- c(2,6,8,10,15,18,22,26,27)
-model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,attributes])
+# Change globals[1] to global_train
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = globals[1])
 
 summary(model_reg)
 
-res <- predict(model_reg,newdata=global_test[,attributes],type='response')
+# Applying model                change globals[2] to global_test
+res <- predict(model_reg,newdata=globals[2],type='response')
 
 # Threshold: p>=tr --> status=1 and p<tr status=-1 
-tr <- 0.80
+tr <- 0.50
 
 # Formatting data with columns loan_id and status
 res <- formatResults(res,global_test,c("loan_id","p"),tr)
