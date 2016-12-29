@@ -187,13 +187,14 @@ applyOper <- function(table, cols, op)
 #----------- PREDICTIVE FUNC. -----------
 
 #Get sample by percentage 
-get_sample <- function(perctg, frame ) 
+get_sample <- function(frame, perctg) 
 {
-  sp <- sample(1:nrow(frame),as.integer(perctg*nrow(frame)))
-  tr <- prueba_global[sp,]
-  ts <- prueba_global[-sp,]
+	n = nrow(frame)
+	sp = (perctg*n)%/%100
+	tr = frame[1:sp,]
+	ts = frame[sp+1:n,][1:(n-sp),]
+	return(list(tr,ts))
 }
-
 
 #------------------ DUDAS -------------------------
 

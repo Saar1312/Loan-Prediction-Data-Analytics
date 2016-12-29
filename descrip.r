@@ -323,6 +323,9 @@ str(trans_train)
 
 #--------------------------- PREDICTION ----------------------------
 
+# Spliting global train table (we know its labels)
+list[global_train,global_test] <- get_sample(global_train,70)
+
 #-------------- Decision tree --------------
 
 # Esto despues lo cambiamos a otro archivo
