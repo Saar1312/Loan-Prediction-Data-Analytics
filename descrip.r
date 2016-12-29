@@ -55,16 +55,11 @@ if(! "dplyr" %in% rownames(installed.packages())){
 if(! "Hmisc" %in% rownames(installed.packages())){
   install.packages("Hmisc")
 }
-# This package could ask for an upgrade of R
-if(! "Hmisc" %in% rownames(installed.packages())){
-	install.packages("Hmisc")
-}
 
 library(lubridate)
 library(ggplot2)
 library(party)
 library(rpart)
-library("Hmisc")
 
 library(DMwR)  
 library(dplyr)
