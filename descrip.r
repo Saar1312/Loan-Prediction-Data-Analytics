@@ -212,6 +212,8 @@ global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
 
 #------------ Adding Features ------------
 
+
+
 # Getting additional features from existing attributes in global_train table
 # Influence of district over loan status
 #global_train <- featureRate(global_train,c("district_id"))
@@ -238,6 +240,10 @@ checkTypes(list(global_train))
 checkNa(list(global_test))
 checkClasses(list(global_test))
 checkTypes(list(global_test))
+
+# Checking correlation matrix and p-values between each pair of variables 
+rcorr(as.matrix(global_train[c(7,10:12,14,17:29)]))
+cor(global_train[c(7,10:12,14,17:29)])
 
 # Taking out unnecessary columns
 global_test <- subset(global_test, select = c(2,4:8,10:29))
