@@ -361,7 +361,7 @@ get_sample <- function(perctg, frame )
 # Other global to experiment
 
 prueba_test <- global_test
-prueba_train <- select(global_train,-client_id,-loan_id,-district_id,-name,-region )
+prueba_train <- select(global_train,loan_id,status, amount,duration,payments, current_time,no..of.inhabitants,ratio.of.urban.inhabitants,average.salary)
 perctg <- 0.7
 
 sp <- sample(1:nrow(prueba_train),as.integer(perctg*nrow(prueba_train)))
