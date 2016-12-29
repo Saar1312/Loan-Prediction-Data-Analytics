@@ -3,7 +3,7 @@ Faculty of Engineering. University of Porto
 Extradition of knowledge and Machine Learning
 Authors: Samuel Arleo & Daniela Socas
 
-Last modified 12/02/2016
+Last modified 29/12/2016
 Descriptive functions to start the project and pre-processing
 "
 
