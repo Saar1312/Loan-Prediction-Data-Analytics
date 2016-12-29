@@ -60,7 +60,6 @@ library(lubridate)
 library(ggplot2)
 library(party)
 library(rpart)
-
 library(DMwR)  
 library(dplyr)
 library(e1071) #Bayes Naive - SVMs
@@ -119,6 +118,8 @@ checkTypes(dframes)
 district<-toNumeric(district,c("unemploymant.rate..95","unemploymant.rate..96","ratio.of.urban.inhabitants"))
 trans_train<-toNumeric(trans_train,c("balance"))
 trans_test<-toNumeric(trans_test,c("balance"))
+trans_train<-toNumeric(trans_train,c("amount"))
+trans_test<-toNumeric(trans_test,c("amount"))
 
 # Integer to Factor
 loan_train <- toFactor(loan_train,c("status"))
@@ -207,28 +208,44 @@ global_test <- merge(global_test,district,by="district_id")
 global_train <- merge(global_train,district,by="district_id")
 
 # Matching users with credit cards
-global_test <- merge(global_test,card_test,by="disp_id", all.x=TRUE)
-global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
+# The number of users with loans that also have cards doesn't seem to be representative
+#global_test <- merge(global_test,card_test,by="disp_id", all.x=TRUE)
+#global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
 
 #------------ Adding Features ------------
 
+# Data frame with the ids of accounts with loans 
+acc_loan_tr <- data.frame(account_id=unique(global_train$account_id))
+acc_loan_ts <- data.frame(account_id=unique(global_test$account_id))
 
+# Matching transactions with accounts
+trans_users_tr <- merge(acc_loan_tr, trans_train, by="account_id")
+trans_users_ts <- merge(acc_loan_ts, trans_test, by="account_id")
 
-# Getting additional features from existing attributes in global_train table
-# Influence of district over loan status
-#global_train <- featureRate(global_train,c("district_id"))
+# Adding new column with means of account balances to the frame of accounts with loans
+acc_loan_tr$balance_mean <- applyOper(trans_users_tr,c("account_id","balance"),1)
+acc_loan_ts$balance_mean <- applyOper(trans_users_ts,c("account_id","balance"),1)
 
-# Add column with influence of district over loan status
-#tmp <- as.data.frame(global_train[c("district_id","district_id.rates")])
-#avg_perf <- mean(tmp$district_id.rates)
-#global_test<-merge(global_test,tmp, by="district_id", all.x=TRUE)
-#dim(global_test)
-#global_test$district_id.rates[is.na(global_test$district_id.rates)] <- avg_perf
-#dim(global_test)
+# Adding new column with stand. deviation of account balances to the frame of accounts with loans
+acc_loan_tr$balance_sd <- applyOper(trans_users_tr,c("account_id","balance"),2)
+acc_loan_ts$balance_sd <- applyOper(trans_users_ts,c("account_id","balance"),2)
+
+# Adding new column with max of account balances to the frame of accounts with loans
+acc_loan_tr$balance_min <- applyOper(trans_users_tr,c("account_id","balance"),3)
+acc_loan_ts$balance_min <- applyOper(trans_users_ts,c("account_id","balance"),3)
+
+# Adding new column with min of account balances to the frame of accounts with loans
+acc_loan_tr$balance_max <- applyOper(trans_users_tr,c("account_id","balance"),4)
+acc_loan_ts$balance_max <- applyOper(trans_users_ts,c("account_id","balance"),4)
+
+# Matching each user in global tables with the information of his account
+global_test <- merge(global_test,acc_loan_ts,by="account_id")
+global_train <- merge(global_train,acc_loan_tr,by="account_id")
+
 #--------- Deleting some features ---------
 
 # Deleting features that don't give important information (columns with 
-# too many NAs, IDs, etc)
+# too many NAs, IDs, etc) or that are not representative to the model
 
 # Checking types, classes and NAs of global tables
 # Global Train table
@@ -242,12 +259,12 @@ checkClasses(list(global_test))
 checkTypes(list(global_test))
 
 # Checking correlation matrix and p-values between each pair of variables 
-rcorr(as.matrix(global_train[c(7,10:12,14,17:29)]))
-cor(global_train[c(7,10:12,14,17:29)])
+#rcorr(as.matrix(global_train[c(7,10:12,14,17:29)]))
+#cor(global_train[c(7,10:12,14,17:29)])
 
 # Taking out unnecessary columns
-global_test <- subset(global_test, select = c(2,4:8,10:29))
-global_train <- subset(global_train, select = c(2,4:8,10:29))
+global_test <- subset(global_test, select = c(33,5:7,10:33))
+global_train <- subset(global_train, select = c(3,5:7,10:33))
 
 global_train$id<-rownames(global_train)
 global_test$id<-rownames(global_test)
@@ -317,10 +334,9 @@ str(trans_train)
 #text(model)
 
 #---------- Logistic regression ------------
-
-model_reg <- glm(status~.,family=binomial(link="logit") ,data = tr[,!(colnames(tr)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))])
-
-res <- predict(model_reg,newdata=tr[,!(colnames(tr)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))],type='response')
+attributes <- c(2:dim(global_train)[2])
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,attributes])
+res <- predict(model_reg,newdata=global_test[,attributes],type='response')
 
 # Threshold: p>=tr --> status=1 and p<tr status=-1 
 tr <- 0.80

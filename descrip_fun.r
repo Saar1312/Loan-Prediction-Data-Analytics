@@ -145,6 +145,8 @@ getResults <- function(a,cols)
     unique(a)
 }
 
+# Format model results frame with the columns |Id|status| and also translates probabilities 
+# to status values as follow: p>=tr --> status=1 and p<tr status=-1 
 formatResults <- function(res,global_test,cols,tr)
 {
 	res = as.data.frame(res)
@@ -157,10 +159,30 @@ formatResults <- function(res,global_test,cols,tr)
 	return(res)
 }
 
-#getResults <- function(a){
-#	a[2]<-unlist(lapply(a[,1], function(x) mean(unlist(a[a[1]==x,][2]))))
-#	unique(a)
-#}
+# Applies operations  mean, standard deviation, max or min of elements in cols[2] with the same id in col[1]
+applyOper <- function(table, cols, op)
+{
+	ids = unique(table[cols[1]])
+	res = vector("list",dim(ids)[1])
+	index = 1
+	for (id in ids[,1]){
+		tmp = unlist(table[table[cols[1]] == id,][cols[2]])
+		if (op == 1){
+			res[index] = mean(tmp) # op = 1 -> mean
+		}
+		else if (op == 2){
+			res[index] = sd(tmp) # op = 2 -> var
+		}
+		else if (op == 3){
+			res[index] = min(tmp) # op = 3 -> min
+		}
+		else if (op == 4){
+			res[index] = max(tmp) # op = 4 -> max
+		}
+		index = index+1
+	}
+	return(unlist(res))
+}
 
 #------------------ DUDAS -------------------------
 
