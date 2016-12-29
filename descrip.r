@@ -23,14 +23,60 @@ if(! "rpart" %in% rownames(installed.packages())){
 	install.packages("rpart")
 }
 
+if(! "DMwR" %in% rownames(installed.packages())){
+  install.packages("DMwR")
+}
+if(! "e1071" %in% rownames(installed.packages())){
+  install.packages("e1071")
+}
+if(! "class" %in% rownames(installed.packages())){
+  install.packages("class")
+}
+if(! "caret" %in% rownames(installed.packages())){
+  install.packages("caret")
+}
+if(! "nnet" %in% rownames(installed.packages())){
+  install.packages("nnet")
+}
+if(! "earth" %in% rownames(installed.packages())){
+  install.packages("earth")
+}
+if(! "randomforest" %in% rownames(installed.packages())){
+  install.packages("randomforest")
+}
+if(! "performanceEstimation" %in% rownames(installed.packages())){
+  install.packages("performanceEstimation")
+}
+if(! "devtools" %in% rownames(installed.packages())){
+  install.packages("devtools")
+}
+if(! "dplyr" %in% rownames(installed.packages())){
+  install.packages("dplyr")
+}
+if(! "Hmisc" %in% rownames(installed.packages())){
+  install.packages("Hmisc")
+}
+
 library(lubridate)
 library(ggplot2)
 library(party)
 library(rpart)
 
+library(DMwR)  
+library(dplyr)
+library(e1071) #Bayes Naive - SVMs
+library(class) #K-nearest neightbors 
+library(caret) #K-nearest neightbors regression
+library(nnet)  #Artiicial Neural Networks
+library(earth) #Mars 
+library(randomForest) #random forest
+library(performanceEstimation)
+library(devtools) 
+library(Hmisc)
+
 #------------- LOADING DESC. AND PREDICT. MODULES ------------
 
-#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
+#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/"
 wd <- "~/Mineria/"
 
 source(paste(wd, "descrip_fun.r", sep=""))
@@ -173,7 +219,7 @@ global_test <- subset(global_test, select = c(2,4:8,10:29,31,33))
 
 checkNa(list(global_train))
 checkClasses(list(global_train))
-checkTypes(list(global_train))
+checkType(list(global_train))
 
 ######### CAMBIAR TIPOS DE GLOBAL TABLE EJ GENDER ES FLOAT
 #---------- Additional Features -----------
@@ -334,3 +380,79 @@ write.table(t2[c("loan_id","status")],file="prediction.csv" ,col.names = c("Id",
 
 
 #model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,c("age","duration","status","gender","amount","reg_perf")])
+
+
+#----------- Predictive functions -----------
+
+#Get sample by percentage 
+get_sample <- function(perctg, frame ) 
+{
+  sp <- sample(1:nrow(frame),as.integer(perctg*nrow(frame)))
+  tr <- prueba_global[sp,]
+  ts <- prueba_global[-sp,]
+}
+
+#----------- Workflow for predection task  ------------
+
+# Other global to experiment
+
+prueba_test <- global_test
+prueba_train <- global_train
+#prueba_global <- rbind(global_test,global_train)
+prueba_global <- select(global_train,-client_id,-loan_id,-district_id,-antiq_card,-type.y,-antiq_card,-name,-region )
+
+#str(prueba_global)
+#prueba_global$id <- as.factor(prueba_global$id)
+#describe(prueba_global)
+
+#Cross Validation Performance Estimation Experiment with SVM 
+
+r1 <- performanceEstimation(
+  PredTask(status ~ ., prueba_global),
+  Workflow(learner="svm"),
+  EstimationTask(metrics="err", method=CV())
+)
+plot(r)
+summary(r)
+
+#mas fancy 
+r2 <- performanceEstimation(
+  PredTask(status ~ .,prueba_global),
+  workflowVariants(learner="svm",
+                   learner.pars=list(cost=1:5,gamma=c(0.1,0.01))),
+  EstimationTask(metrics="mse",method=CV()))
+summary(r2)
+plot(rs2)
+topPerformers(r2)
+
+
+#a pata svm
+s1 <- svm(status ~ .,tr)
+ps <- predict(s1,ts)
+table(ps,ts$status)
+regr.eval(ts$status,ps)
+
+#a pata mars
+mars <- earth(status ~ .,tr)
+ps2 <- predict(mars,ts)
+(mae <- mean(abs(ts$status - ps2)))
+
+#Cross Validation Performance Estimation Experiment with rpart 
+
+r3 <- performanceEstimation(
+  PredTask(status ~ ., prueba_global),
+  Workflow(learner="rpartXS"),
+  EstimationTask(metrics="err", method=CV())
+)
+plot(r)
+summary(r)
+
+#otro
+
+res3 <- performanceEstimation(
+  PredTask(status ~ ., prueba_global),
+  workflowVariants("standardWF",
+                   learner=c("svm","randomForest")),
+  EstimationTask(metrics="err",method=CV(nReps=2,nFolds=5)))
+
+
