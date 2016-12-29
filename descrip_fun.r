@@ -137,28 +137,6 @@ featureRate <- function(frame, feature)
 	return(res)
 }
 
-#---------------- RES. FILE --------------------
-
-getResults <- function(a,cols)
-{
-    a[cols[2]] = unlist(lapply(a[,cols[1]], function(x) mean(unlist(a[a[cols[1]]==x,][cols[2]]))))
-    unique(a)
-}
-
-# Format model results frame with the columns |Id|status| and also translates probabilities 
-# to status values as follow: p>=tr --> status=1 and p<tr status=-1 
-formatResults <- function(res,global_test,cols,tr)
-{
-	res = as.data.frame(res)
-	names(res) = cols[2]
-	res$id = rownames(res)
-	res$loan_id = merge(global_test,res,by="id")$loan_id
-	res = res[cols]
-	res = getResults(res,cols)
-	res$p = ifelse(res$p > tr,1,-1)
-	return(res)
-}
-
 # Applies operations  mean, standard deviation, max or min of elements in cols[2] with the same id in col[1]
 applyOper <- function(table, cols, op)
 {
@@ -193,7 +171,7 @@ get_sample <- function(frame, perctg)
 	sp = (perctg*n)%/%100
 	tr = frame[1:sp,]
 	ts = frame[sp+1:n,][1:(n-sp),]
-	return(list(tr,ts))
+	return(list("train"=tr,"test"=ts))
 }
 
 #------------------ DUDAS -------------------------

@@ -1,10 +1,9 @@
 "
 Faculty of Engineering. University of Porto
-Extradition of knowledge and Machine Learning
+Knowledge Extraction and Machine Learning
 Authors: Samuel Arleo & Daniela Socas
 
 Last modified 29/12/2016
-Descriptive functions to start the project and pre-processing
 "
 
 #------------------ LOADING PACKAGES --------------------------
@@ -283,16 +282,10 @@ columns<- c(
 )
 
 # Selecting relevant features
-features <- columns[c(1:4,6:29)]
+features <- columns[c(1:4,6:10,13:29)]
 global_test <- global_test[features]
 global_train <- global_train[features]
-
-global_train$id<-rownames(global_train)
-global_test$id<-rownames(global_test)
-
 #--------------------------- DESCRIPTION ----------------------------
-
-#------------------- User -----------------
 
 # Boxplot: Age vs Status
 boxplot(age~status,data=global_train)
@@ -314,12 +307,7 @@ hist(client[client$gender == "0",]$age)
 # Women
 hist(client[client$gender == "1",]$age)
 
-#----------------- Account -----------------
-
-#------------------- Disp ------------------
-
-#------------------- Loan ------------------
-
+# Some plots to understand data features
 barplot(table(loan_train$duration))
 barplot(table(loan_train$status))
 hist(loan_train$amount)
@@ -327,17 +315,6 @@ plot(loan_train$amount,loan_train$status)
 boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
 plot(loan_train$payments,loan_train$status)
 boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
-
-#--------------- Transactions --------------
-
-#Most are withdrawals and then credit. 
-plot(trans_train$type)
-plot(trans_train$operation)
-hist(trans_train$amount)
-hist(trans_train$balance)
-
-str(trans_train)
-#summary(trans_train)
 
 #--------------------------- PREDICTION ----------------------------
 
@@ -358,18 +335,17 @@ globals <- get_sample(global_train,70)
 # QUIZA: no..of.inhabitants, no..of.municipalities.with.inhabitants...499, (esta si)no..of.municipalities.with.inhabitants.500.1999, (si)no..of.cities, (si)unemploymant.rate..95, (quiza) no..of.commited.crimes..96, balance_max (quiza)
 # NO: no..of.municipalities.with.inhabitants..10000, no..of.municipalities.with.inhabitants.2000.9999, no..of.municipalities.with.inhabitants..10000, ratio.of.urban.inhabitants, average.salary, unemploymant.rate..96, no..of.enterpreneurs.per.1000.inhabitants, no..of.commited.crimes..95, 
 # Change globals[1] to global_train
-model_reg <- glm(status~.,family=binomial(link="logit") ,data = globals[1])
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = globals$train[])
 
 summary(model_reg)
 
 # Applying model                change globals[2] to global_test
-res <- predict(model_reg,newdata=globals[2],type='response')
+res <- predict(model_reg,newdata=globals$test,type='response')
 
 # Threshold: p>=tr --> status=1 and p<tr status=-1 
 tr <- 0.50
 
-# Formatting data with columns loan_id and status
-res <- formatResults(res,global_test,c("loan_id","p"),tr)
+res = ifelse(res$p > tr,1,-1)
 
 write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
 
