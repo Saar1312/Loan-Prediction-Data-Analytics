@@ -197,11 +197,11 @@ client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 colnames(district)[1]<-"district_id"
 
 # Matching users with accounts
-global_train <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
+#global_train <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
 
 # Matching users and their accounts with loans
-global_test <- merge(global_train,loan_test,by="account_id")
-global_train <- merge(global_train,loan_train,by="account_id")
+global_test <- merge(disp,loan_test,by="account_id")
+global_train <- merge(disp,loan_train,by="account_id")
 
 # Matching users with their districts
 global_test <- merge(global_test,district,by="district_id")
@@ -263,8 +263,8 @@ checkTypes(list(global_test))
 #cor(global_train[c(7,10:12,14,17:29)])
 
 # Taking out unnecessary columns
-global_test <- subset(global_test, select = c(33,5:7,10:33))
-global_train <- subset(global_train, select = c(3,5:7,10:33))
+global_test <- subset(global_test, select = c(3,5:8,10:33))
+global_train <- subset(global_train, select = c(3,5:8,10:33))
 
 global_train$id<-rownames(global_train)
 global_test$id<-rownames(global_test)
@@ -346,16 +346,6 @@ tr <- 0.80
 res <- formatResults(res,global_test,c("loan_id","p"),tr)
 
 write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
-
-#----------- Predictive functions -----------
-
-#Get sample by percentage 
-get_sample <- function(perctg, frame ) 
-{
-  sp <- sample(1:nrow(frame),as.integer(perctg*nrow(frame)))
-  tr <- prueba_global[sp,]
-  ts <- prueba_global[-sp,]
-}
 
 #----------- Workflow for predection task  ------------
 
