@@ -190,6 +190,12 @@ client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 
 #---------- Joining data frames -----------
 
+# Adding number of owners to each account and deleting status columns
+t <- table(disp$account_id,disp$type)
+df <- data.frame(account_id=rownames(t),owners=(t[,1]+t[,2]))
+disp <- merge(df,disp,by="account_id")
+disp <- disp[!(disp$type == "DISPONENT"),][c(1:4)]
+
 # Creating a global tables that matche users with their accounts, loans, districts and credit cards
 # to start the mining process
 
@@ -197,11 +203,12 @@ client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 colnames(district)[1]<-"district_id"
 
 # Matching users with accounts
-#global_train <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
+global_train <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
+global_test <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
 
 # Matching users and their accounts with loans
-global_test <- merge(disp,loan_test,by="account_id")
-global_train <- merge(disp,loan_train,by="account_id")
+global_test <- merge(global_test,loan_test,by="account_id")
+global_train <- merge(global_train,loan_train,by="account_id")
 
 # Matching users with their districts
 global_test <- merge(global_test,district,by="district_id")
@@ -262,9 +269,20 @@ checkTypes(list(global_test))
 #rcorr(as.matrix(global_train[c(7,10:12,14,17:29)]))
 #cor(global_train[c(7,10:12,14,17:29)])
 
-# Taking out unnecessary columns
-global_test <- subset(global_test, select = c(3,5:8,10:33))
-global_train <- subset(global_train, select = c(3,5:8,10:33))
+# List of features
+columns<- c(
+    "loan_id","owners","gender", "age","date","amount", "duration","payments", 
+    "status","current_time", "name","region", "no..of.inhabitants", 
+    "no..of.municipalities.with.inhabitants...499", "no..of.municipalities.with.inhabitants.500.1999", 
+    "no..of.municipalities.with.inhabitants.2000.9999", "no..of.municipalities.with.inhabitants..10000",    
+    "no..of.cities", "ratio.of.urban.inhabitants","average_salary" ,"unemploymant.rate..95","unemploymant.rate..96",
+    "no..of.enterpreneurs.per.1000.inhabitants", "no..of.commited.crimes..95", "no..of.commited.crimes..96",
+    "balance_mean", "balance_sd","balance_min", "balance_max"                        
+)
+
+# Selecting relevant features
+global_test <- global_test(columns[])
+global_train <- global_train(columns)
 
 global_train$id<-rownames(global_train)
 global_test$id<-rownames(global_test)
@@ -324,7 +342,7 @@ str(trans_train)
 #--------------------------- PREDICTION ----------------------------
 
 # Spliting global train table (we know its labels)
-list[global_train,global_test] <- get_sample(global_train,70)
+globals <- get_sample(global_train,70)
 
 #-------------- Decision tree --------------
 
@@ -337,8 +355,12 @@ list[global_train,global_test] <- get_sample(global_train,70)
 #text(model)
 
 #---------- Logistic regression ------------
-attributes <- c(2:dim(global_train)[2])
+# QUIZA: no..of.inhabitants, no..of.municipalities.with.inhabitants...499, (esta si)no..of.municipalities.with.inhabitants.500.1999, (si)no..of.cities, (si)unemploymant.rate..95, (quiza) no..of.commited.crimes..96, balance_max (quiza)
+# NO: no..of.municipalities.with.inhabitants..10000, no..of.municipalities.with.inhabitants.2000.9999, no..of.municipalities.with.inhabitants..10000, ratio.of.urban.inhabitants, average.salary, unemploymant.rate..96, no..of.enterpreneurs.per.1000.inhabitants, no..of.commited.crimes..95, 
+attributes <- c(2,6,8,10,15,18,22,26,27)
 model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,attributes])
+
+summary(model_reg)
 
 res <- predict(model_reg,newdata=global_test[,attributes],type='response')
 
