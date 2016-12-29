@@ -55,11 +55,15 @@ if(! "dplyr" %in% rownames(installed.packages())){
 if(! "Hmisc" %in% rownames(installed.packages())){
   install.packages("Hmisc")
 }
+if(! "MASS" %in% rownames(installed.packages())){
+  install.packages("MASS")
+}
 
 library(lubridate)
 library(ggplot2)
 library(party)
 library(rpart)
+
 library(DMwR)  
 library(dplyr)
 library(e1071) #Bayes Naive - SVMs
@@ -71,7 +75,7 @@ library(randomForest) #random forest
 library(performanceEstimation)
 library(devtools) 
 library(Hmisc)
-
+library(MASS)
 #-------------------- LOADING FUNCTIONS ----------------------
 
 #wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/"
@@ -197,11 +201,15 @@ client$birth_number <- ymd(unlist(lapply(client$birth_number,formatDate)))
 colnames(district)[1]<-"district_id"
 
 # Matching users with accounts
+global_test <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
 global_train <- merge(disp, client[,!(names(client)%in%c("birth_number"))],by="client_id")
 
 # Matching users and their accounts with loans
-global_test <- merge(global_train,loan_test,by="account_id")
+global_test <- merge(global_test,loan_test,by="account_id")
 global_train <- merge(global_train,loan_train,by="account_id")
+
+global_train <- subset(global_train, type == "OWNER")
+global_test <- subset(global_test, type == "OWNER")
 
 # Matching users with their districts
 global_test <- merge(global_test,district,by="district_id")
@@ -263,8 +271,8 @@ checkTypes(list(global_test))
 #cor(global_train[c(7,10:12,14,17:29)])
 
 # Taking out unnecessary columns
-global_test <- subset(global_test, select = c(33,5:7,10:33))
-global_train <- subset(global_train, select = c(3,5:7,10:33))
+global_test <- subset(global_test, select = c(3,5:8,10:33))
+global_train <- subset(global_train, select = c(3,5:8,10:33))
 
 global_train$id<-rownames(global_train)
 global_test$id<-rownames(global_test)
@@ -348,20 +356,13 @@ table(res,ts$status)
 
 write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
 
-#----------- Predictive functions -----------
-
-#Get sample by percentage 
-get_sample <- function(perctg, frame ) 
-{
-  sp <- sample(1:nrow(frame),as.integer(perctg*nrow(frame)))
-  tr <- frame[sp,]
-  ts <- frame[-sp,]
-}
-
 # Other global to experiment
 
-prueba_test <- global_test
-prueba_train <- select(global_train,loan_id,status, amount,duration,payments, current_time,no..of.inhabitants,ratio.of.urban.inhabitants,average.salary)
+#prueba_test <- global_test
+#prueba_train <- select(global_train,loan_id,status, amount,duration,payments,current_time,no..of.inhabitants,ratio.of.urban.inhabitants,average.salary,balance_min,balance_max,balance_mean)
+#prueba_train <- select(global_train ,status,duration,no..of.inhabitants,average.salary,balance_min)
+prueba_train <- select(global_train ,status,duration,no..of.inhabitants,average.salary)
+
 perctg <- 0.7
 
 sp <- sample(1:nrow(prueba_train),as.integer(perctg*nrow(prueba_train)))
@@ -376,15 +377,40 @@ str(prueba_train)
 prueba_train$id <- as.integer(prueba_train$id)
 describe(prueba_train)
 
+corr2 <- rcorr(as.matrix(prueba_train))
+corr
+#lda
+
+l <- lda(status ~ ., tr)
+preds <- predict(l,ts)
+preds
+(mtrx <- table(preds$class,ts$status))
+(err <- 1-sum(diag(mtrx))/sum(mtrx))
+
 #tree based model
 
 mtree <- rpartXse(status  ~ ., tr)
 predtree <- predict(mtree,ts, type = 'class')
 mc <- table(predtree,ts$status)
-err <- 100*(1-sum(diag(mc))/sum(mc))
+err <- (1-sum(diag(mc))/sum(mc))
 err
 describe(predtree)
-auc(ts$status, predtree)
+
+#NBayes
+nb <- naiveBayes(status ~ ., tr,laplace=1)
+(mtrx <- table(predict(nb,ts),ts$status))
+(err <- 1-sum(diag(mtrx))/sum(mtrx))
+
+#Knn
+
+nn3 <- kNN(status ~ .,tr,ts,k=5,norm=TRUE)
+(mtrx <- table(nn3,ts$status))
+(err <- 1-sum(diag(mtrx))/sum(mtrx))
+
+#ann
+nn <- nnet(status ~ .,tr,size=5, decay =0.1, maxit=1000)
+(mtrx2 <- table(predict(nn,ts,type='class'),ts$status))
+summary(nn)
 
 #Cross Validation Performance Estimation Experiment with SVM 
 
@@ -415,7 +441,7 @@ table(predsvm,ts$status)
 #a pata mars
 mars <- earth(status ~ .,tr)
 predmars <- predict(mars,ts)
-(mae <- mean(abs(ts$status - predmars)))
+(mae <- mean(abs(ts$status - predmars$class)))
 
 #Cross Validation Performance Estimation Experiment with rpart 
 
