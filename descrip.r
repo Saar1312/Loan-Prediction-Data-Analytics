@@ -40,7 +40,7 @@ if(! "earth" %in% rownames(installed.packages())){
   install.packages("earth")
 }
 if(! "randomforest" %in% rownames(installed.packages())){
-  install.packages("randomforest")
+  install.packages("randomForest")
 }
 if(! "performanceEstimation" %in% rownames(installed.packages())){
   install.packages("performanceEstimation")
@@ -53,6 +53,9 @@ if(! "dplyr" %in% rownames(installed.packages())){
 }
 if(! "Hmisc" %in% rownames(installed.packages())){
   install.packages("Hmisc")
+}
+if(! "MASS" %in% rownames(installed.packages())){
+  install.packages("MASS")
 }
 
 library(lubridate)
@@ -70,7 +73,7 @@ library(randomForest) #random forest
 library(performanceEstimation)
 library(devtools) 
 library(Hmisc)
-
+library(MASS)
 #-------------------- LOADING FUNCTIONS ----------------------
 
 #wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
@@ -372,48 +375,77 @@ write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names
 
 #----------- Workflow for predection task  ------------
 
-# Other global to experiment
-
-prueba_test <- global_test
-prueba_train <- global_train
 #prueba_global <- rbind(global_test,global_train)
-prueba_global <- select(global_train,-client_id,-loan_id,-district_id,-antiq_card,-type.y,-antiq_card,-name,-region )
+#prueba_global <- select(global_train,-client_id,-loan_id,-district_id,-antiq_card,-type.y,-antiq_card,-name,-region )
+str(prueba_train)
+prueba_train$id <- as.integer(prueba_train$id)
+describe(prueba_train)
 
-#str(prueba_global)
-#prueba_global$id <- as.factor(prueba_global$id)
-#describe(prueba_global)
+corr2 <- rcorr(as.matrix(prueba_train))
+corr
+#lda
+
+l <- lda(status ~ ., tr)
+preds <- predict(l,ts)
+preds
+(mtrx <- table(preds$class,ts$status))
+(err <- 1-sum(diag(mtrx))/sum(mtrx))
+
+#tree based model
+
+mtree <- rpartXse(status  ~ ., tr)
+predtree <- predict(mtree,ts, type = 'class')
+mc <- table(predtree,ts$status)
+err <- (1-sum(diag(mc))/sum(mc))
+err
+describe(predtree)
+
+#NBayes
+nb <- naiveBayes(status ~ ., tr,laplace=1)
+(mtrx <- table(predict(nb,ts),ts$status))
+(err <- 1-sum(diag(mtrx))/sum(mtrx))
+
+#Knn
+
+nn3 <- kNN(status ~ .,tr,ts,k=5,norm=TRUE)
+(mtrx <- table(nn3,ts$status))
+(err <- 1-sum(diag(mtrx))/sum(mtrx))
+
+#ann
+nn <- nnet(status ~ .,tr,size=5, decay =0.1, maxit=1000)
+(mtrx2 <- table(predict(nn,ts,type='class'),ts$status))
+summary(nn)
 
 #Cross Validation Performance Estimation Experiment with SVM 
 
 r1 <- performanceEstimation(
-  PredTask(status ~ ., prueba_global),
+  PredTask(status ~ ., prueba_train),
   Workflow(learner="svm"),
   EstimationTask(metrics="err", method=CV())
 )
-plot(r)
-summary(r)
+plot(r1)
+summary(r1)
 
 #mas fancy 
 r2 <- performanceEstimation(
-  PredTask(status ~ .,prueba_global),
+  PredTask(status ~ .,prueba_train),
   workflowVariants(learner="svm",
                    learner.pars=list(cost=1:5,gamma=c(0.1,0.01))),
-  EstimationTask(metrics="mse",method=CV()))
+  EstimationTask(metrics="err",method=CV()))
 summary(r2)
-plot(rs2)
+plot(r2)
 topPerformers(r2)
 
 
 #a pata svm
-s1 <- svm(status ~ .,tr)
-ps <- predict(s1,ts)
-table(ps,ts$status)
-regr.eval(ts$status,ps)
+msvm <- svm(status ~ .,tr)
+predsvm <- predict(msvm,ts)
+table(predsvm,ts$status)
 
 #a pata mars
 mars <- earth(status ~ .,tr)
-ps2 <- predict(mars,ts)
-(mae <- mean(abs(ts$status - ps2)))
+predmars <- predict(mars,ts)
+(mae <- mean(abs(ts$status - predmars$class)))
 
 #Cross Validation Performance Estimation Experiment with rpart 
 
@@ -425,16 +457,28 @@ r3 <- performanceEstimation(
 plot(r)
 summary(r)
 
+#random forest
+
+mrand <- randomForest(status ~ ., tr)
+predrand <- predict(mrand,ts)
+describe(predrand)
+table(predrand,ts$status)
+
+install.packages("pROC")
+library(pROC)
+auc(ts$status, predrand)
+
 #otro
 
 res3 <- performanceEstimation(
-  PredTask(status ~ ., prueba_global),
+  PredTask(status ~ ., prueba_train),
   workflowVariants("standardWF",
-                   learner=c("svm","randomForest")),
+                   learner=c("svm","randomForest","rpartXse"),
+                   predictor.pars=list(type="class")),
   EstimationTask(metrics="err",method=CV(nReps=2,nFolds=5)))
 
-
-
+summary(res3)
+plot(res3)
 
 
 #- Eliminar ultimas columnas (antiq_card y type de tarjeta de credito) Consultar con Daniela
