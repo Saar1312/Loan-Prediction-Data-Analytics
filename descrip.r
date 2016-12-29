@@ -169,14 +169,15 @@ global_train <- merge(global_train,card_train,by="disp_id", all.x=TRUE)
 
 # Getting additional features from existing attributes in global_train table
 # Influence of district over loan status
-global_train <- featureRate(global_train,c("district_id"))
+#global_train <- featureRate(global_train,c("district_id"))
 
 # Add column with influence of district over loan status
-tmp <- as.data.frame(global_train[c("district_id","district_id.rates")])
-avg_perf <- mean(tmp$district_id.rates)
-global_test<-merge(global_test,tmp, by="district_id", all.x=TRUE)
-global_test$district_id.rates[is.na(global_test$district_id.rates)] <- avg_perf
-
+#tmp <- as.data.frame(global_train[c("district_id","district_id.rates")])
+#avg_perf <- mean(tmp$district_id.rates)
+#global_test<-merge(global_test,tmp, by="district_id", all.x=TRUE)
+#dim(global_test)
+#global_test$district_id.rates[is.na(global_test$district_id.rates)] <- avg_perf
+#dim(global_test)
 #--------- Deleting some features ---------
 
 # Deleting features that don't give important information (columns with 
@@ -196,6 +197,9 @@ checkTypes(list(global_test))
 # Taking out unnecessary columns
 global_test <- subset(global_test, select = c(2,4:8,10:29))
 global_train <- subset(global_train, select = c(2,4:8,10:29))
+
+global_train$id<-rownames(global_train)
+global_test$id<-rownames(global_test)
 
 #--------------------------- DESCRIPTION ----------------------------
 
@@ -263,39 +267,18 @@ str(trans_train)
 
 #---------- Logistic regression ------------
 
-global_train$status<-factor(global_train$status)
-global_train$gender<-factor(global_train$gender)
-global_test$gender<-factor(global_test$gender)
-
-global_train$id<-rownames(global_train)
-global_test$id<-rownames(global_test)
-
-#global_train$type.y<-factor(unlist(lapply(global_train$type.y,function(x) ifelse(is.na(x),0,1))))
-# antiq_card no vale la pena usarla porque solo 10 rows la tienen, igual que type.y (esos son dos atributos de tarjetas de credito)
-# Name da problemas, creo que porque son demasiados.
 model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,!(colnames(global_train)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))])
 
 res <- predict(model_reg,newdata=global_test[,!(colnames(global_test)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))],type='response')
 
-res <- as.data.frame(res)
-names(res) <- "p"
-res$id<-rownames(res)
-res$loan_id <- merge(global_test,res,by="id")$loan_id
-res$status <- ifelse(res$p > 0.65,1,-1)
+# Threshold: p>=tr --> status=1 and p<tr status=-1 
+tr <- 0.80
 
-t <- table(res$loan_id,res$status)
-t2 <- data.frame(loan_id = rownames(t),bad = t[,1], good=t[,2])
-t2$status<-ifelse(t2$good>=t2$bad,1,-1)
-rownames(t2) <- NULL
-write.table(t2[c("loan_id","status")],file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
-#misClasificError <- mean(fitted.results != test$Survived)
-#print(paste('Accuracy',1-misClasificError))
+# Formatting data with columns loan_id and status
+res <- formatResults(res,global_test,c("loan_id","p"),tr)
 
+write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
 
-#model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,c("age","duration","status","gender","amount","reg_perf")])
-
-
-#- Buscar NAs cuando se agrega el reg_perf al global test
 #- Eliminar ultimas columnas (antiq_card y type de tarjeta de credito) Consultar con Daniela
 # Si se va a eliminar, para eso no hacer el join con card_train
 #- En el paso "Cleaning some features", agregar columna de reg_perf

@@ -45,7 +45,7 @@ checkClasses <- function(frames)
 }
 
 # Getting the type of each column of each table to verify types numeric, integer, etc
-checkType <- function(frames)
+checkTypes <- function(frames)
 {
 	cat("###################### Types of each column ####################\n")
 	lapply(frames,function(x) unlist(lapply(x,function(y) typeof(y))))
@@ -122,7 +122,7 @@ getAntiquity <- function(date, refDate, type = "years")
 	}
 }
 
-#------------------ TYPES -------------------------
+#---------------- FEATURES --------------------
 
 featureRate <- function(frame, feature)
 {
@@ -132,10 +132,35 @@ featureRate <- function(frame, feature)
     rates = (rates[,1]-rates[,2])/avg 						# Calculate the actual rate: (num_positive-num_negatives)/avg
     rates = as.data.frame(rates)
     rates[feature] = rownames(rates) 						# Maps rates with values of column "feature"
-    res = merge(frame,rates, by=feature[1])# Add column with ratings to frame table
+    res = merge(frame,rates, by=feature[1])					# Add column with ratings to frame table
 	names(res)[names(res) == "rates"] = paste(feature[1],".rates",sep="")
 	return(res)
 }
+
+#---------------- RES. FILE --------------------
+
+getResults <- function(a,cols)
+{
+    a[cols[2]] = unlist(lapply(a[,cols[1]], function(x) mean(unlist(a[a[cols[1]]==x,][cols[2]]))))
+    unique(a)
+}
+
+formatResults <- function(res,global_test,cols,tr)
+{
+	res = as.data.frame(res)
+	names(res) = cols[2]
+	res$id = rownames(res)
+	res$loan_id = merge(global_test,res,by="id")$loan_id
+	res = res[cols]
+	res = getResults(res,cols)
+	res$p = ifelse(res$p > tr,1,-1)
+	return(res)
+}
+
+#getResults <- function(a){
+#	a[2]<-unlist(lapply(a[,1], function(x) mean(unlist(a[a[1]==x,][2]))))
+#	unique(a)
+#}
 
 #------------------ DUDAS -------------------------
 
