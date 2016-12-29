@@ -41,7 +41,7 @@ if(! "earth" %in% rownames(installed.packages())){
   install.packages("earth")
 }
 if(! "randomforest" %in% rownames(installed.packages())){
-  install.packages("randomforest")
+  install.packages("randomForest")
 }
 if(! "performanceEstimation" %in% rownames(installed.packages())){
   install.packages("performanceEstimation")
@@ -75,7 +75,7 @@ library(Hmisc)
 
 #-------------------- LOADING FUNCTIONS ----------------------
 
-#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
+#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/"
 wd <- "~/Mineria/"
 
 source(paste(wd, "descrip_fun.r", sep=""))
@@ -312,15 +312,17 @@ str(trans_train)
 
 #---------- Logistic regression ------------
 
-model_reg <- glm(status~.,family=binomial(link="logit") ,data = global_train[,!(colnames(global_train)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))])
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = tr[,!(colnames(tr)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))])
 
-res <- predict(model_reg,newdata=global_test[,!(colnames(global_test)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))],type='response')
+res <- predict(model_reg,newdata=tr[,!(colnames(tr)%in%c("id","client_id","loan_id","district_id","antiq_card","type.y","antiq_card","name"))],type='response')
 
 # Threshold: p>=tr --> status=1 and p<tr status=-1 
 tr <- 0.80
 
 # Formatting data with columns loan_id and status
 res <- formatResults(res,global_test,c("loan_id","p"),tr)
+
+table(res,ts$status)
 
 write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
 
@@ -330,54 +332,68 @@ write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names
 get_sample <- function(perctg, frame ) 
 {
   sp <- sample(1:nrow(frame),as.integer(perctg*nrow(frame)))
-  tr <- prueba_global[sp,]
-  ts <- prueba_global[-sp,]
+  tr <- frame[sp,]
+  ts <- frame[-sp,]
 }
-
-#----------- Workflow for predection task  ------------
 
 # Other global to experiment
 
 prueba_test <- global_test
-prueba_train <- global_train
-#prueba_global <- rbind(global_test,global_train)
-prueba_global <- select(global_train,-client_id,-loan_id,-district_id,-antiq_card,-type.y,-antiq_card,-name,-region )
+prueba_train <- select(global_train,-client_id,-loan_id,-district_id,-name,-region )
+perctg <- 0.7
 
-#str(prueba_global)
-#prueba_global$id <- as.factor(prueba_global$id)
-#describe(prueba_global)
+sp <- sample(1:nrow(prueba_train),as.integer(perctg*nrow(prueba_train)))
+tr <- prueba_train[sp,]
+ts <- prueba_train[-sp,]
+
+#----------- Workflow for predection task  ------------
+
+#prueba_global <- rbind(global_test,global_train)
+#prueba_global <- select(global_train,-client_id,-loan_id,-district_id,-antiq_card,-type.y,-antiq_card,-name,-region )
+str(prueba_train)
+prueba_train$id <- as.integer(prueba_train$id)
+describe(prueba_train)
+
+#tree based model
+
+mtree <- rpartXse(status  ~ ., tr)
+predtree <- predict(mtree,ts, type = 'class')
+mc <- table(predtree,ts$status)
+err <- 100*(1-sum(diag(mc))/sum(mc))
+err
+describe(predtree)
+auc(ts$status, predtree)
 
 #Cross Validation Performance Estimation Experiment with SVM 
 
 r1 <- performanceEstimation(
-  PredTask(status ~ ., prueba_global),
+  PredTask(status ~ ., prueba_train),
   Workflow(learner="svm"),
   EstimationTask(metrics="err", method=CV())
 )
-plot(r)
-summary(r)
+plot(r1)
+summary(r1)
 
 #mas fancy 
 r2 <- performanceEstimation(
-  PredTask(status ~ .,prueba_global),
+  PredTask(status ~ .,prueba_train),
   workflowVariants(learner="svm",
                    learner.pars=list(cost=1:5,gamma=c(0.1,0.01))),
-  EstimationTask(metrics="mse",method=CV()))
+  EstimationTask(metrics="err",method=CV()))
 summary(r2)
-plot(rs2)
+plot(r2)
 topPerformers(r2)
 
 
 #a pata svm
-s1 <- svm(status ~ .,tr)
-ps <- predict(s1,ts)
-table(ps,ts$status)
-regr.eval(ts$status,ps)
+msvm <- svm(status ~ .,tr)
+predsvm <- predict(msvm,ts)
+table(predsvm,ts$status)
 
 #a pata mars
 mars <- earth(status ~ .,tr)
-ps2 <- predict(mars,ts)
-(mae <- mean(abs(ts$status - ps2)))
+predmars <- predict(mars,ts)
+(mae <- mean(abs(ts$status - predmars)))
 
 #Cross Validation Performance Estimation Experiment with rpart 
 
@@ -389,16 +405,28 @@ r3 <- performanceEstimation(
 plot(r)
 summary(r)
 
+#random forest
+
+mrand <- randomForest(status ~ ., tr)
+predrand <- predict(mrand,ts)
+describe(predrand)
+table(predrand,ts$status)
+
+install.packages("pROC")
+library(pROC)
+auc(ts$status, predrand)
+
 #otro
 
 res3 <- performanceEstimation(
-  PredTask(status ~ ., prueba_global),
+  PredTask(status ~ ., prueba_train),
   workflowVariants("standardWF",
-                   learner=c("svm","randomForest")),
+                   learner=c("svm","randomForest","rpartXse"),
+                   predictor.pars=list(type="class")),
   EstimationTask(metrics="err",method=CV(nReps=2,nFolds=5)))
 
-
-
+summary(res3)
+plot(res3)
 
 
 #- Eliminar ultimas columnas (antiq_card y type de tarjeta de credito) Consultar con Daniela
