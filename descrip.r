@@ -78,7 +78,7 @@ library(MASS)
 #wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
 wd <- "~/Mineria/"
 
-source(paste(wd, "descrip_fun.r", sep=""))
+#source(paste(wd, "descrip_fun.r", sep=""))
 
 #---------------------- LOADING DATA -------------------------
 
@@ -266,14 +266,43 @@ checkNa(list(global_test))
 checkClasses(list(global_test))
 checkTypes(list(global_test))
 
-# Checking correlation matrix and p-values between each pair of variables 
-#rcorr(as.matrix(global_train[c(7,10:12,14,17:29)]))
-#cor(global_train[c(7,10:12,14,17:29)])
+#--------------------------- DESCRIPTION ----------------------------
 
-# List of features
-columns<- c(
-    "loan_id","owners","gender", "age","date","amount", "duration","payments", 
-    "status","current_time", "name","region", "no..of.inhabitants", 
+# Avoiding printing plots
+describe <- FALSE
+
+if(describe){
+  # Boxplot: Age vs Status
+  boxplot(age~status,data=global_train)
+
+  # Boxplot: Age vs Status by genders (0: Male 1: Female)
+  boxplot(age~status,data=global_train[global_train$gender == "0",])
+  boxplot(age~status,data=global_train[global_train$gender == "1",])
+
+  # Contingency table: gender vs status
+  c1 <- table(global_train$gender,global_train$status)
+
+  # Barplot: gender vs status
+  barplot(c1,main = "Gender-Status frequencies")
+
+  # Some plots to understand data features
+  barplot(table(loan_train$duration))
+  barplot(table(loan_train$status))
+  hist(loan_train$amount)
+  plot(loan_train$amount,loan_train$status)
+  boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
+  plot(loan_train$payments,loan_train$status)
+  boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
+
+  # Campare each feature with status using plots
+  status_compare(global_train)
+}
+
+#--------------------------- PREDICTION ----------------------------
+
+features <- c(
+    "loan_id","owners","gender", "age","amount", "duration","payments", 
+    "status","current_time","region", "no..of.inhabitants", 
     "no..of.municipalities.with.inhabitants...499", "no..of.municipalities.with.inhabitants.500.1999", 
     "no..of.municipalities.with.inhabitants.2000.9999", "no..of.municipalities.with.inhabitants..10000",    
     "no..of.cities", "ratio.of.urban.inhabitants","average.salary" ,"unemploymant.rate..95","unemploymant.rate..96",
@@ -282,62 +311,19 @@ columns<- c(
 )
 
 # Selecting relevant features
-features <- columns[c(1:4,6:10,13:29)]
 global_test <- global_test[features]
 global_train <- global_train[features]
-#--------------------------- DESCRIPTION ----------------------------
 
-# Boxplot: Age vs Status
-boxplot(age~status,data=global_train)
-
-# Boxplot: Age vs Status by genders (0: Male 1: Female)
-boxplot(age~status,data=global_train[global_train$gender == "0",])
-boxplot(age~status,data=global_train[global_train$gender == "1",])
-
-# Contingency table: gender vs status
-c1 <- table(global_train$gender,global_train$status)
-
-# Barplot: gender vs status
-barplot(c1,main = "Gender-Status frequencies")
-
-# Histograms: Age
-# Men
-hist(client[client$gender == "0",]$age)
-
-# Women
-hist(client[client$gender == "1",]$age)
-
-# Some plots to understand data features
-barplot(table(loan_train$duration))
-barplot(table(loan_train$status))
-hist(loan_train$amount)
-plot(loan_train$amount,loan_train$status)
-boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
-plot(loan_train$payments,loan_train$status)
-boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
-
-#--------------------------- PREDICTION ----------------------------
-
-# Spliting global train table (we know its labels)
-globals <- get_sample(global_train,70)
-
-#-------------- Decision tree --------------
-
-# Esto despues lo cambiamos a otro archivo
-
-#model <- rpart( status ~ ., data=global_train ) 
-
-#summary(model)
-#plot(model)
-#text(model)
+# Splits data when using loan_train for both training and testing
+# globals <- get_sample(global_train,70)
 
 #---------- Logistic regression ------------
-# QUIZA: no..of.inhabitants, no..of.municipalities.with.inhabitants...499, (esta si)no..of.municipalities.with.inhabitants.500.1999, (si)no..of.cities, (si)unemploymant.rate..95, (quiza) no..of.commited.crimes..96, balance_max (quiza)
-# NO: no..of.municipalities.with.inhabitants..10000, no..of.municipalities.with.inhabitants.2000.9999, no..of.municipalities.with.inhabitants..10000, ratio.of.urban.inhabitants, average.salary, unemploymant.rate..96, no..of.enterpreneurs.per.1000.inhabitants, no..of.commited.crimes..95, 
-# Change globals[1] to global_train
-model_reg <- glm(status~.,family=binomial(link="logit") ,data = globals$train[])
 
+model_reg <- glm(status~.,family=binomial(link="logit") ,data = globals$train)
+
+# Analysing model to filter again features
 summary(model_reg)
+anova(model_reg, test="Chisq")
 
 # Applying model                change globals[2] to global_test
 res <- predict(model_reg,newdata=globals$test,type='response')
@@ -345,8 +331,25 @@ res <- predict(model_reg,newdata=globals$test,type='response')
 # Threshold: p>=tr --> status=1 and p<tr status=-1 
 tr <- 0.50
 
-res = ifelse(res$p > tr,1,-1)
+# Translating P to labels
+res <- ifelse(res > tr,1,-1)
 
+# Preparing res to create the file
+res <- data.frame(Id=names(res),Predicted=res)
+
+# Uncomment when using loan_train for both training and testing
+#loan_train$Id <- rownames(loan_train)
+
+loan_test$Id <- rownames(loan_test) # If we are using Kaggle
+res <- merge(res,loan_test,by="Id")[c("loan_id","Predicted","status")]
+
+# Uncomment when using loan_train for both training and testing
+#res <- merge(res,loan_train,by="Id")[c("loan_id","Predicted","status")]
+
+# Confidence matrix
+confMatrix(res)
+
+colnames(res)<-c("Id","Predicted")
 write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
 
 #----------- Workflow for predection task  ------------
@@ -369,16 +372,16 @@ preds
 
 #tree based model
 
-mtree <- rpartXse(status  ~ ., tr)
-predtree <- predict(mtree,ts, type = 'class')
-mc <- table(predtree,ts$status)
+mtree <- rpartXse(status  ~ ., global_train)
+predtree <- predict(mtree,global_test, type = 'class')
+mc <- table(predtree,global_test$status)
 err <- (1-sum(diag(mc))/sum(mc))
 err
 describe(predtree)
 
 #NBayes
-nb <- naiveBayes(status ~ ., tr,laplace=1)
-(mtrx <- table(predict(nb,ts),ts$status))
+nb <- naiveBayes(status ~ ., global_train,laplace=1)
+(mtrx <- table(predict(nb,global_test),global_test$status))
 (err <- 1-sum(diag(mtrx))/sum(mtrx))
 
 #Knn

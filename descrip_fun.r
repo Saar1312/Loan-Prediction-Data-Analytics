@@ -122,6 +122,54 @@ getAntiquity <- function(date, refDate, type = "years")
 	}
 }
 
+#-------------- VISUALIZATION --------------------
+
+# Visualizing relation between each var and target var status
+status_compare <- function(global_train)
+  # Ownership
+  table(global_train$owners,global_train$status)
+  # Gender
+  table(global_train$gender,global_train$status)
+  # Age
+  boxplot(age~status,data=global_train)
+  # Amount
+  boxplot(amount~status,data=global_train)
+  # Duration
+  boxplot(duration~status,data=global_train)
+  # Payments
+  boxplot(payments~status,data=global_train)
+  # Current_time
+  boxplot(current_time~status,data=global_train)
+  # no..of.inhabitants
+  boxplot(no..of.inhabitants~status,data=global_train)
+  # no..of.municipalities.with.inhabitants...499
+  boxplot(no..of.municipalities.with.inhabitants...499~status,data=global_train)
+  # no..of.municipalities.with.inhabitants.500.1999
+  boxplot(no..of.municipalities.with.inhabitants.500.1999~status,data=global_train)
+  # no..of.municipalities.with.inhabitants.2000.9999
+  boxplot(no..of.municipalities.with.inhabitants.2000.9999~status,data=global_train)
+  # no..of.municipalities.with.inhabitants..10000
+  boxplot(no..of.municipalities.with.inhabitants..10000~status,data=global_train)
+  # no..of.cities
+  boxplot(no..of.cities~status,data=global_train)
+  # ratio.of.urban.inhabitants
+  boxplot(ratio.of.urban.inhabitants~status,data=global_train)
+  # average.salary
+  boxplot(average.salary~status,data=global_train)
+  # global_train$unemploymant.rate..95
+  boxplot(unemploymant.rate..95~status,data=global_train)
+  # no..of.enterpreneurs.per.1000.inhabitants
+  boxplot(no..of.enterpreneurs.per.1000.inhabitants~status,data=global_train)
+  # balance_mean
+  boxplot(balance_mean~status,data=global_train)
+  # balance_sd
+  boxplot(balance_sd~status,data=global_train)
+  # balance_min
+  boxplot(balance_min~status,data=global_train)
+  # balance_max
+  boxplot(balance_max~status,data=global_train)
+
+
 #---------------- FEATURES --------------------
 
 featureRate <- function(frame, feature)
@@ -173,6 +221,12 @@ get_sample <- function(frame, perctg)
 	ts = frame[sp+1:n,][1:(n-sp),]
 	return(list("train"=tr,"test"=ts))
 }
+
+confMatrix <- function(res)
+{
+	confusionMatrix(res$Predicted,res$status,positive="1")[2]
+}
+
 
 #------------------ DUDAS -------------------------
 
