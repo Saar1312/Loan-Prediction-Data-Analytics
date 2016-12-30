@@ -75,7 +75,7 @@ library(Hmisc)
 library(MASS)
 #-------------------- LOADING FUNCTIONS ----------------------
 
-#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics"
+#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/"
 wd <- "~/Mineria/"
 
 source(paste(wd, "descrip_fun.r", sep=""))
@@ -87,8 +87,8 @@ tables <- c("account", "card_test", "card_train", "client", "disp", "district", 
             "loan_train", "trans_test", "trans_train")
 
 # Change here the path of data
-path <- "~/Mineria/Data/"
-#path <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/Data/"
+#path <- "~/Mineria/Data/"
+path <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/Data/"
 
 # Values of empty fields in .csv files
 na_values <- c(""," ","NA","?")
@@ -282,44 +282,19 @@ columns<- c(
 )
 
 # Selecting relevant features
-features <- columns[c(1:4,6:10,13:29)]
-global_test <- global_test[features]
-global_train <- global_train[features]
-#--------------------------- DESCRIPTION ----------------------------
-
-# Boxplot: Age vs Status
-boxplot(age~status,data=global_train)
-
-# Boxplot: Age vs Status by genders (0: Male 1: Female)
-boxplot(age~status,data=global_train[global_train$gender == "0",])
-boxplot(age~status,data=global_train[global_train$gender == "1",])
-
-# Contingency table: gender vs status
-c1 <- table(global_train$gender,global_train$status)
-
-# Barplot: gender vs status
-barplot(c1,main = "Gender-Status frequencies")
-
-# Histograms: Age
-# Men
-hist(client[client$gender == "0",]$age)
-
-# Women
-hist(client[client$gender == "1",]$age)
-
-# Some plots to understand data features
-barplot(table(loan_train$duration))
-barplot(table(loan_train$status))
-hist(loan_train$amount)
-plot(loan_train$amount,loan_train$status)
-boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
-plot(loan_train$payments,loan_train$status)
-boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
+features <- columns[c(7,9,13,20)]
+features <- columns[c(7,9,20)]
+prueba_test <- global_test
+prueba_train <- global_train
+prueba_test <- global_test[features]
+prueba_train <- global_train[features]
 
 #--------------------------- PREDICTION ----------------------------
 
 # Spliting global train table (we know its labels)
-globals <- get_sample(global_train,70)
+globals <- get_sample(prueba_train,0.7)
+tr <- globals$train 
+ts <- globals$test
 
 #-------------- Decision tree --------------
 
@@ -341,20 +316,21 @@ summary(model_reg)
 
 # Applying model                change globals[2] to global_test
 res <- predict(model_reg,newdata=globals$test,type='response')
-
+res
 # Threshold: p>=tr --> status=1 and p<tr status=-1 
-tr <- 0.50
+thr <- 0.50
+res = ifelse(res$posterior > thr,1,-1)
 
-res = ifelse(res$p > tr,1,-1)
+#-----File
+submission <- prueba_test[,c(Id = "loan_id", Predicted = "status")]
+write.table(submission,file="prediction.csv" ,col.names = TRUE ,row.names=FALSE,sep=",")
 
-write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
 
 #----------- Workflow for predection task  ------------
 
 #prueba_global <- rbind(global_test,global_train)
 #prueba_global <- select(global_train,-client_id,-loan_id,-district_id,-antiq_card,-type.y,-antiq_card,-name,-region )
 str(prueba_train)
-prueba_train$id <- as.integer(prueba_train$id)
 describe(prueba_train)
 
 corr2 <- rcorr(as.matrix(prueba_train))
@@ -362,22 +338,31 @@ corr
 #lda
 
 l <- lda(status ~ ., tr)
-preds <- predict(l,ts)
-preds
-(mtrx <- table(preds$class,ts$status))
+
+global_test <- predict(l,global_test, type='class' )
+
+predl <- predict(l,ts, type='class' )
+predl
+(mtrx <- table(predl$class,ts$status))
 (err <- 1-sum(diag(mtrx))/sum(mtrx))
+
+globals$test$Id <- rownames(globals)                        
+merge(preds,globals$test,by="Id")
+global_test$
 
 #tree based model
 
-mtree <- rpartXse(status  ~ ., tr)
-predtree <- predict(mtree,ts, type = 'class')
-mc <- table(predtree,ts$status)
+mtree <- rpartXse(status  ~ .,  tr)
+pred <- predict(mtree,ts, type = 'class')
+prueba_test$status <- predict(mtree,prueba_test, type = 'class')
+mc <- table(pred,ts$status)
 err <- (1-sum(diag(mc))/sum(mc))
 err
-describe(predtree)
+mc
 
 #NBayes
-nb <- naiveBayes(status ~ ., tr,laplace=1)
+nb <- naiveBayes(status ~ ., prueba_train ,laplace=1)
+prueba_test$status <- predict(nb,prueba_test) 
 (mtrx <- table(predict(nb,ts),ts$status))
 (err <- 1-sum(diag(mtrx))/sum(mtrx))
 
@@ -399,7 +384,7 @@ r1 <- performanceEstimation(
   Workflow(learner="svm"),
   EstimationTask(metrics="err", method=CV())
 )
-plot(r1)
+    plot(r1)
 summary(r1)
 
 #mas fancy 
@@ -417,11 +402,6 @@ topPerformers(r2)
 msvm <- svm(status ~ .,tr)
 predsvm <- predict(msvm,ts)
 table(predsvm,ts$status)
-
-#a pata mars
-mars <- earth(status ~ .,tr)
-predmars <- predict(mars,ts)
-(mae <- mean(abs(ts$status - predmars$class)))
 
 #Cross Validation Performance Estimation Experiment with rpart 
 
