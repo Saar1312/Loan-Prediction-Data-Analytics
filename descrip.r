@@ -301,13 +301,10 @@ if(describe){
 #--------------------------- PREDICTION ----------------------------
 
 features <- c(
-    "loan_id","owners","gender", "age","amount", "duration","payments", 
-    "status","current_time","region", "no..of.inhabitants", 
-    "no..of.municipalities.with.inhabitants...499", "no..of.municipalities.with.inhabitants.500.1999", 
-    "no..of.municipalities.with.inhabitants.2000.9999", "no..of.municipalities.with.inhabitants..10000",    
-    "no..of.cities", "ratio.of.urban.inhabitants","average.salary" ,"unemploymant.rate..95","unemploymant.rate..96",
-    "no..of.enterpreneurs.per.1000.inhabitants", "no..of.commited.crimes..95", "no..of.commited.crimes..96",
-    "balance_mean", "balance_sd","balance_min", "balance_max"                        
+    "loan_id",
+    "amount",
+    "duration",
+    "status"
 )
 
 # Selecting relevant features
@@ -343,16 +340,16 @@ res <- data.frame(Id=names(res),Predicted=res)
 
 loan_test$Id <- rownames(loan_test) # If we are using Kaggle
 res$Id <- rownames(res)
-res <- merge(res,loan_test,by="Id")[c("loan_id","Predicted","status")]
-
+res <- merge(res,loan_test,by="Id")[c("loan_id","Predicted")]
+colnames(res)<- c("Id","Predicted")
 # Uncomment when using loan_train for both training and testing
 #res <- merge(res,loan_train,by="Id")[c("loan_id","Predicted","status")]
 
-# Confidence matrix
-confMatrix(res)
+# Confidence matrix (Uncomment when using loan_train for both training and testing)
+#confMatrix(res)
 
 # Writing the prediction
-write.table(res,file="prediction.csv" ,row.names=FALSE,sep=",")
+write.table(res,file="prediction6_p.csv" ,row.names=FALSE,sep=",")
 
 #----------- Workflow for predection task  ------------
 

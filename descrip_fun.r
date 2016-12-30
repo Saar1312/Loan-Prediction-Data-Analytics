@@ -125,7 +125,7 @@ getAntiquity <- function(date, refDate, type = "years")
 #-------------- VISUALIZATION --------------------
 
 # Visualizing relation between each var and target var status
-status_compare <- function(global_train)
+status_compare <- function(global_train){
   # Ownership
   table(global_train$owners,global_train$status)
   # Gender
@@ -168,7 +168,7 @@ status_compare <- function(global_train)
   boxplot(balance_min~status,data=global_train)
   # balance_max
   boxplot(balance_max~status,data=global_train)
-
+}
 
 #---------------- FEATURES --------------------
 
