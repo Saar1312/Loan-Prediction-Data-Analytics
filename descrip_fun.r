@@ -167,12 +167,44 @@ applyOper <- function(table, cols, op)
 #Get sample by percentage 
 get_sample <- function(frame, perctg) 
 {
-	n = nrow(frame)
-	sp = (perctg*n)%/%100
-	tr = frame[1:sp,]
-	ts = frame[sp+1:n,][1:(n-sp),]
-	return(list("train"=tr,"test"=ts))
+  sp <- sample(1:nrow(frame),as.integer(perc*nrow(frame)))
+  tr <- frame[sp,]
+  ts <- frame[-sp,]
+  return(list("train"=tr,"test"=ts))
 }
+
+#--------------------------- DESCRIPTION ----------------------------
+
+# Boxplot: Age vs Status
+boxplot(age~status,data=global_train)
+
+# Boxplot: Age vs Status by genders (0: Male 1: Female)
+boxplot(age~status,data=global_train[global_train$gender == "0",])
+boxplot(age~status,data=global_train[global_train$gender == "1",])
+
+# Contingency table: gender vs status
+c1 <- table(global_train$gender,global_train$status)
+
+# Barplot: gender vs status
+barplot(c1,main = "Gender-Status frequencies")
+
+# Histograms: Age
+# Men
+hist(client[client$gender == "0",]$age)
+
+# Women
+hist(client[client$gender == "1",]$age)
+
+# Some plots to understand data features
+barplot(table(loan_train$duration))
+barplot(table(loan_train$status))
+hist(loan_train$amount)
+plot(loan_train$amount,loan_train$status)
+boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
+plot(loan_train$payments,loan_train$status)
+boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
+
+
 
 #------------------ DUDAS -------------------------
 
