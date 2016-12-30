@@ -313,6 +313,7 @@ features <- c(
 # Selecting relevant features
 global_test <- global_test[features]
 global_train <- global_train[features]
+globals <- list(train=global_train,test=global_test)
 
 # Splits data when using loan_train for both training and testing
 # globals <- get_sample(global_train,70)
@@ -341,6 +342,7 @@ res <- data.frame(Id=names(res),Predicted=res)
 #loan_train$Id <- rownames(loan_train)
 
 loan_test$Id <- rownames(loan_test) # If we are using Kaggle
+res$Id <- rownames(res)
 res <- merge(res,loan_test,by="Id")[c("loan_id","Predicted","status")]
 
 # Uncomment when using loan_train for both training and testing
@@ -349,8 +351,8 @@ res <- merge(res,loan_test,by="Id")[c("loan_id","Predicted","status")]
 # Confidence matrix
 confMatrix(res)
 
-colnames(res)<-c("Id","Predicted")
-write.table(res,file="prediction.csv" ,col.names = c("Id","Predicted"),row.names=FALSE,sep=",")
+# Writing the prediction
+write.table(res,file="prediction.csv" ,row.names=FALSE,sep=",")
 
 #----------- Workflow for predection task  ------------
 
