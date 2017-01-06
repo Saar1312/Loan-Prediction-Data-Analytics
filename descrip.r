@@ -75,8 +75,8 @@ library(Hmisc)
 library(MASS)
 #-------------------- LOADING FUNCTIONS ----------------------
 
-#wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/"
-wd <- "~/Mineria/"
+wd <- "C:/Users/Dusady/Documents/Dan/UP/ML/Loan-Prediction-Data-Analytics/"
+#wd <- "~/Mineria/"
 
 #source(paste(wd, "descrip_fun.r", sep=""))
 
@@ -133,6 +133,24 @@ district <- toStr(district,c("name","region"))
 loan_test <- toNumeric(loan_test,c("amount","payments"))
 loan_train <- toNumeric(loan_train,c("amount","payments"))
 district <- toNumeric(district,c("average.salary"))
+
+#-------------FOR CLUSTERING ---------------#
+require(DMwR)
+client_clus <-  merge(client,district)
+
+library(cluster)
+a <- pam(client_clus[,-c(1,2,3,4,5,6,7)],k=3)
+plot(a)
+a$clusinfo
+a$medoids
+
+b <- pam(loan_train[,c(4,5,6)],k=4)
+plot(a)
+b$clusinfo
+b$medoids
+
+
+write.table(b$medoids,file="clusterb.csv" ,col.names = TRUE ,row.names=FALSE,sep=",")
 
 #------------- NAs ---------------
 
@@ -290,9 +308,9 @@ if(describe){
   barplot(table(loan_train$status))
   hist(loan_train$amount)
   plot(loan_train$amount,loan_train$status)
-  boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud
+  boxplot(amount~status,data=loan_train)	# The more amount to granted, the more likely to fraud *******
   plot(loan_train$payments,loan_train$status)
-  boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud
+  boxplot(payments~status,data=loan_train) # The more months to pay, the more likely to fraud *******
 
   # Campare each feature with status using plots
   status_compare(global_train)
@@ -404,20 +422,19 @@ global_test$
 
 #tree based model
 
-mtree <- rpartXse(status  ~ ., global_train)
-predtree <- predict(mtree,global_test, type = 'class')
-mc <- table(predtree,global_test$status)
+mtree <- rpartXse(status  ~ duration + no..of.inhabitants + average.salary, prueba_train)
+predtree <- predict(mtree,prueba_train, type = 'class')
+mc <- table(predtree,prueba_train$status)
 err <- (1-sum(diag(mc))/sum(mc))
 err
 mc
 
 #NBayes
-nb <- naiveBayes(status ~ ., global_train,laplace=1)
-(mtrx <- table(predict(nb,global_test),global_test$status))
+nb <- naiveBayes(status ~ ., prueba_train,laplace=1)
+(mtrx <- table(predict(nb,prueba_train),prueba_train$status))
 (err <- 1-sum(diag(mtrx))/sum(mtrx))
 
 #Knn
-
 nn3 <- kNN(status ~ .,tr,ts,k=5,norm=TRUE)
 (mtrx <- table(nn3,ts$status))
 (err <- 1-sum(diag(mtrx))/sum(mtrx))
